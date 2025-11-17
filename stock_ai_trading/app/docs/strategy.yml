@@ -1,0 +1,279 @@
+backtest:
+  tags:
+    - 策略管理
+  summary: 运行策略回测
+  description: 对指定策略进行历史数据回测，评估策略表现
+  security:
+    - BearerAuth: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required:
+            - strategy_name
+            - start_date
+            - end_date
+          properties:
+            strategy_name:
+              type: string
+              description: 策略名称
+              example: "ma_crossover"
+            start_date:
+              type: string
+              format: date
+              description: 回测开始日期
+              example: "2023-01-01"
+            end_date:
+              type: string
+              format: date
+              description: 回测结束日期
+              example: "2023-12-31"
+            initial_capital:
+              type: number
+              description: 初始资金
+              example: 1000000.0
+              minimum: 1000
+              maximum: 100000000
+            stock_pool:
+              type: array
+              items:
+                type: string
+                pattern: "^[0-9]{6}$"
+              description: 股票池（股票代码列表）
+              example: ["000001", "000002", "600000"]
+              maxItems: 100
+            parameters:
+              type: object
+              description: 策略参数
+              example:
+                short_window: 5
+                long_window: 20
+            benchmark:
+              type: string
+              description: 基准指数代码
+              example: "000300"
+              default: "000300"
+  responses:
+    '200':
+      description: 回测成功
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: '#/components/schemas/ApiResponse'
+              - type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      backtest_result:
+                        $ref: '#/components/schemas/BacktestResult'
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '500':
+      $ref: '#/components/responses/InternalServerError'
+
+get_signals:
+  tags:
+    - 策略管理
+  summary: 获取交易信号
+  description: 获取指定条件下的交易信号
+  security:
+    - BearerAuth: []
+  parameters:
+    - name: codes
+      in: query
+      description: 股票代码列表
+      schema:
+        type: array
+        items:
+          type: string
+          pattern: "^[0-9]{6}$"
+        maxItems: 50
+      style: form
+      explode: true
+      example: ["000001", "600000"]
+    - name: strategy_names
+      in: query
+      description: 策略名称列表
+      schema:
+        type: array
+        items:
+          type: string
+        maxItems: 10
+      style: form
+      explode: true
+      example: ["ma_crossover", "rsi_strategy"]
+    - name: signal_types
+      in: query
+      description: 信号类型列表
+      schema:
+        type: array
+        items:
+          type: string
+          enum: [buy, sell, hold]
+      style: form
+      explode: true
+      example: ["buy", "sell"]
+    - name: start_time
+      in: query
+      description: 开始时间
+      schema:
+        type: string
+        format: date-time
+      example: "2023-12-01T00:00:00Z"
+    - name: end_time
+      in: query
+      description: 结束时间
+      schema:
+        type: string
+        format: date-time
+      example: "2023-12-31T23:59:59Z"
+  responses:
+    '200':
+      description: 获取信号成功
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: '#/components/schemas/ApiResponse'
+              - type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      signals:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            signal_id:
+                              type: string
+                              description: 信号ID
+                            stock_code:
+                              type: string
+                              description: 股票代码
+                            strategy_name:
+                              type: string
+                              description: 策略名称
+                            signal_type:
+                              type: string
+                              enum: [buy, sell, hold]
+                              description: 信号类型
+                            confidence:
+                              type: number
+                              minimum: 0
+                              maximum: 1
+                              description: 信号置信度
+                            price:
+                              type: number
+                              description: 信号价格
+                            generated_at:
+                              type: string
+                              format: date-time
+                              description: 信号生成时间
+                      total:
+                        type: integer
+                        description: 信号总数
+                      summary:
+                        type: object
+                        properties:
+                          buy_signals:
+                            type: integer
+                            description: 买入信号数量
+                          sell_signals:
+                            type: integer
+                            description: 卖出信号数量
+                          hold_signals:
+                            type: integer
+                            description: 持有信号数量
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '500':
+      $ref: '#/components/responses/InternalServerError'
+
+select_strategy:
+  tags:
+    - 策略管理
+  summary: 选择交易策略
+  description: 选择并配置交易策略
+  security:
+    - BearerAuth: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required:
+            - strategy_name
+          properties:
+            strategy_name:
+              type: string
+              description: 策略名称
+              example: "ma_crossover"
+            parameters:
+              type: object
+              description: 策略参数
+              example:
+                short_window: 5
+                long_window: 20
+            stock_pool:
+              type: array
+              items:
+                type: string
+                pattern: "^[0-9]{6}$"
+              description: 股票池
+              example: ["000001", "000002"]
+              maxItems: 100
+            auto_trade:
+              type: boolean
+              description: 是否启用自动交易
+              example: false
+              default: false
+            risk_level:
+              type: string
+              enum: [low, medium, high]
+              description: 风险等级
+              example: "medium"
+              default: "medium"
+  responses:
+    '200':
+      description: 策略选择成功
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: '#/components/schemas/ApiResponse'
+              - type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      strategy_name:
+                        type: string
+                        description: 策略名称
+                      parameters:
+                        type: object
+                        description: 策略参数
+                      auto_trade:
+                        type: boolean
+                        description: 自动交易状态
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '500':
+      $ref: '#/components/responses/InternalServerError'

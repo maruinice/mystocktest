@@ -1,0 +1,47 @@
+{
+  "ai_generated": true,
+  "author": "AI助手",
+  "buy_conditions": [
+    {
+      "description": "RSI指标低于30，表示股票处于超卖状态",
+      "indicator": "RSI",
+      "operator": "less_than",
+      "type": "indicator",
+      "value": 30
+    }
+  ],
+  "category": "mean_reversion",
+  "code": "def initialize(context):\n    \"\"\"\n    策略初始化函数\n    \"\"\"\n    # 设置交易标的（这里以苹果股票为例）\n    context.asset = symbol('AAPL')\n    \n    # 设置策略参数\n    context.rsi_period = 14\n    context.rsi_oversold = 30\n    context.rsi_overbought = 70\n    context.lookback_days = 20\n    \n    # 设置仓位管理参数\n    context.position_size = 0.1  # 每次交易仓位比例\n    \n    # 记录交易状态\n    context.has_position = False\n\ndef handle_data(context, data):\n    \"\"\"\n    每日数据处理函数\n    \"\"\"\n    # 获取历史价格数据\n    prices = data.history(context.asset, 'price', context.lookback_days, '1d')\n    \n    # 计算RSI指标\n    rsi_value = calculate_rsi(prices, context.rsi_period)\n    \n    # 获取当前持仓\n    current_position = context.portfolio.positions[context.asset].amount\n    \n    # 买入条件：RSI低于30且当前无持仓\n    if rsi_value < context.rsi_oversold and current_position == 0:\n        # 执行买入操作\n        order_target_percent(context.asset, context.position_size)\n        context.has_position = True\n        print(f\"买入信号：RSI={rsi_value:.2f}，买入仓位{context.position_size*100}%\")\n    \n    # 卖出条件：RSI高于70且当前有持仓\n    elif rsi_value > context.rsi_overbought and current_position > 0:\n        # 执行卖出操作\n        order_target_percent(context.asset, 0)\n        context.has_position = False\n        print(f\"卖出信号：RSI={rsi_value:.2f}，清空仓位\")\n\ndef calculate_rsi(prices, period):\n    \"\"\"\n    计算RSI指标\n    \n    参数:\n    prices -- 价格序列\n    period -- RSI计算周期\n    \n    返回:\n    rsi -- 当前RSI值\n    \"\"\"\n    # 计算价格变化\n    delta = prices.diff()\n    \n    # 分离上涨和下跌\n    gain = (delta.where(delta > 0, 0)).rolling(window=period).mean()\n    loss = (-delta.where(delta < 0, 0)).rolling(window=period).mean()\n    \n    # 计算RS\n    rs = gain / loss\n    \n    # 计算RSI\n    rsi = 100 - (100 / (1 + rs))\n    \n    return rsi.iloc[-1] if len(rsi) > 0 else 50",
+  "created_at": "2025-11-05T19:32:08.493690",
+  "description": "基于RSI指标的均值回归策略，在RSI低于30时认为股票超卖而买入，在RSI高于70时认为股票超买而卖出",
+  "indicators": [
+    "RSI"
+  ],
+  "name": "RSI均值回归策略",
+  "original_prompt": "创建一个使用RSI指标的均值回归策略，当RSI低于30时买入，高于70时卖出",
+  "parameters": {
+    "lookback_days": 20,
+    "rsi_overbought": 70,
+    "rsi_oversold": 30,
+    "rsi_period": 14
+  },
+  "real_ai_generated": true,
+  "risk_controls": {
+    "max_position_size": 0.15,
+    "stop_loss": 8.0,
+    "take_profit": 12.0
+  },
+  "risk_level": "medium",
+  "sell_conditions": [
+    {
+      "description": "RSI指标高于70，表示股票处于超买状态",
+      "indicator": "RSI",
+      "operator": "greater_than",
+      "type": "indicator",
+      "value": 70
+    }
+  ],
+  "status": "draft",
+  "strategy_id": "AI_1762342328",
+  "updated_at": "2025-11-05T19:32:08.493694"
+}

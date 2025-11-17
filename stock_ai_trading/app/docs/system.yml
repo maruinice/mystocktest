@@ -1,0 +1,210 @@
+health_check:
+  tags:
+    - 系统管理
+  summary: 健康检查
+  description: 检查系统各组件的健康状态
+  responses:
+    '200':
+      description: 系统健康状态
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: '#/components/schemas/ApiResponse'
+              - type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      status:
+                        type: string
+                        enum: [healthy, degraded, unhealthy]
+                        description: 系统整体状态
+                        example: "healthy"
+                      timestamp:
+                        type: string
+                        format: date-time
+                        description: 检查时间
+                        example: "2023-12-01T10:00:00Z"
+                      uptime:
+                        type: number
+                        description: 系统运行时间（秒）
+                        example: 86400
+                      version:
+                        type: string
+                        description: 系统版本
+                        example: "1.0.0"
+                      components:
+                        type: object
+                        description: 各组件状态
+                        properties:
+                          database:
+                            type: object
+                            properties:
+                              status:
+                                type: string
+                                enum: [healthy, unhealthy]
+                                example: "healthy"
+                              response_time:
+                                type: number
+                                description: 响应时间（毫秒）
+                                example: 5.2
+                          redis:
+                            type: object
+                            properties:
+                              status:
+                                type: string
+                                enum: [healthy, unhealthy]
+                                example: "healthy"
+                              response_time:
+                                type: number
+                                description: 响应时间（毫秒）
+                                example: 1.8
+                          market_data:
+                            type: object
+                            properties:
+                              status:
+                                type: string
+                                enum: [healthy, unhealthy]
+                                example: "healthy"
+                              last_update:
+                                type: string
+                                format: date-time
+                                description: 最后更新时间
+                                example: "2023-12-01T09:59:30Z"
+                          trading_engine:
+                            type: object
+                            properties:
+                              status:
+                                type: string
+                                enum: [healthy, unhealthy]
+                                example: "healthy"
+                              active_orders:
+                                type: integer
+                                description: 活跃订单数
+                                example: 25
+                      system_metrics:
+                        type: object
+                        description: 系统指标
+                        properties:
+                          cpu_usage:
+                            type: number
+                            minimum: 0
+                            maximum: 100
+                            description: CPU使用率（%）
+                            example: 45.2
+                          memory_usage:
+                            type: number
+                            minimum: 0
+                            maximum: 100
+                            description: 内存使用率（%）
+                            example: 68.5
+                          disk_usage:
+                            type: number
+                            minimum: 0
+                            maximum: 100
+                            description: 磁盘使用率（%）
+                            example: 32.1
+                          network_io:
+                            type: object
+                            properties:
+                              bytes_sent:
+                                type: integer
+                                description: 发送字节数
+                                example: 1048576
+                              bytes_recv:
+                                type: integer
+                                description: 接收字节数
+                                example: 2097152
+    '503':
+      description: 服务不可用
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: '#/components/schemas/ErrorResponse'
+              - type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      status:
+                        type: string
+                        enum: [unhealthy]
+                        example: "unhealthy"
+                      failed_components:
+                        type: array
+                        items:
+                          type: string
+                        description: 失败的组件列表
+                        example: ["database", "redis"]
+
+system_status:
+  tags:
+    - 系统管理
+  summary: 获取系统状态
+  description: 获取详细的系统运行状态和统计信息
+  security:
+    - BearerAuth: []
+  responses:
+    '200':
+      description: 系统状态信息
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: '#/components/schemas/ApiResponse'
+              - type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      system_info:
+                        type: object
+                        properties:
+                          hostname:
+                            type: string
+                            description: 主机名
+                            example: "trading-server-01"
+                          platform:
+                            type: string
+                            description: 操作系统平台
+                            example: "Linux"
+                          python_version:
+                            type: string
+                            description: Python版本
+                            example: "3.9.7"
+                          start_time:
+                            type: string
+                            format: date-time
+                            description: 启动时间
+                            example: "2023-12-01T00:00:00Z"
+                      performance_metrics:
+                        type: object
+                        properties:
+                          requests_per_second:
+                            type: number
+                            description: 每秒请求数
+                            example: 125.5
+                          average_response_time:
+                            type: number
+                            description: 平均响应时间（毫秒）
+                            example: 45.2
+                          error_rate:
+                            type: number
+                            description: 错误率（%）
+                            example: 0.1
+                      active_connections:
+                        type: integer
+                        description: 活跃连接数
+                        example: 150
+                      total_requests:
+                        type: integer
+                        description: 总请求数
+                        example: 1000000
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '500':
+      $ref: '#/components/responses/InternalServerError'

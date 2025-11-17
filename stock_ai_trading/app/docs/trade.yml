@@ -1,0 +1,289 @@
+create_order:
+  tags:
+    - 交易管理
+  summary: 创建订单
+  description: 创建新的交易订单（买入或卖出）
+  security:
+    - BearerAuth: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required:
+            - stock_code
+            - order_type
+            - side
+            - quantity
+          properties:
+            stock_code:
+              type: string
+              pattern: "^[0-9]{6}$"
+              description: 股票代码
+              example: "000001"
+            order_type:
+              type: string
+              enum: [market, limit, stop, stop_limit]
+              description: 订单类型
+              example: "limit"
+            side:
+              type: string
+              enum: [buy, sell]
+              description: 买卖方向
+              example: "buy"
+            quantity:
+              type: integer
+              minimum: 100
+              multipleOf: 100
+              description: 交易数量（股）
+              example: 1000
+            price:
+              type: number
+              minimum: 0.01
+              description: 委托价格（限价单必填）
+              example: 15.50
+            stop_price:
+              type: number
+              minimum: 0.01
+              description: 止损价格（止损单必填）
+              example: 14.00
+            time_in_force:
+              type: string
+              enum: [GTC, IOC, FOK, DAY]
+              description: 订单有效期
+              example: "GTC"
+              default: "GTC"
+            client_order_id:
+              type: string
+              description: 客户端订单ID
+              example: "client_order_123"
+  responses:
+    '200':
+      description: 订单创建成功
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: '#/components/schemas/ApiResponse'
+              - type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      order:
+                        $ref: '#/components/schemas/Order'
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '500':
+      $ref: '#/components/responses/InternalServerError'
+
+get_orders:
+  tags:
+    - 交易管理
+  summary: 获取订单列表
+  description: 获取用户的订单列表，支持筛选和分页
+  security:
+    - BearerAuth: []
+  parameters:
+    - name: status
+      in: query
+      description: 订单状态筛选
+      schema:
+        type: string
+        enum: [pending, filled, cancelled, rejected, expired]
+      example: "pending"
+    - name: stock_code
+      in: query
+      description: 股票代码筛选
+      schema:
+        type: string
+        pattern: "^[0-9]{6}$"
+      example: "000001"
+    - name: side
+      in: query
+      description: 买卖方向筛选
+      schema:
+        type: string
+        enum: [buy, sell]
+      example: "buy"
+    - name: start_date
+      in: query
+      description: 开始日期
+      schema:
+        type: string
+        format: date
+      example: "2023-12-01"
+    - name: end_date
+      in: query
+      description: 结束日期
+      schema:
+        type: string
+        format: date
+      example: "2023-12-31"
+    - name: page
+      in: query
+      description: 页码
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+      example: 1
+    - name: size
+      in: query
+      description: 每页大小
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+      example: 20
+  responses:
+    '200':
+      description: 获取订单列表成功
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: '#/components/schemas/ApiResponse'
+              - type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      orders:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Order'
+                      pagination:
+                        $ref: '#/components/schemas/PaginationInfo'
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '500':
+      $ref: '#/components/responses/InternalServerError'
+
+get_positions:
+  tags:
+    - 交易管理
+  summary: 获取持仓列表
+  description: 获取用户当前的持仓信息
+  security:
+    - BearerAuth: []
+  parameters:
+    - name: stock_code
+      in: query
+      description: 股票代码筛选
+      schema:
+        type: string
+        pattern: "^[0-9]{6}$"
+      example: "000001"
+  responses:
+    '200':
+      description: 获取持仓列表成功
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: '#/components/schemas/ApiResponse'
+              - type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      positions:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            stock_code:
+                              type: string
+                              description: 股票代码
+                            stock_name:
+                              type: string
+                              description: 股票名称
+                            quantity:
+                              type: integer
+                              description: 持仓数量
+                            available_quantity:
+                              type: integer
+                              description: 可用数量
+                            avg_cost:
+                              type: number
+                              description: 平均成本
+                            market_value:
+                              type: number
+                              description: 市值
+                            unrealized_pnl:
+                              type: number
+                              description: 未实现盈亏
+                            unrealized_pnl_ratio:
+                              type: number
+                              description: 未实现盈亏比例
+                            last_price:
+                              type: number
+                              description: 最新价格
+                      total_market_value:
+                        type: number
+                        description: 总市值
+                      total_unrealized_pnl:
+                        type: number
+                        description: 总未实现盈亏
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '500':
+      $ref: '#/components/responses/InternalServerError'
+
+cancel_order:
+  tags:
+    - 交易管理
+  summary: 撤销订单
+  description: 撤销指定的订单
+  security:
+    - BearerAuth: []
+  parameters:
+    - name: order_id
+      in: path
+      required: true
+      description: 订单ID
+      schema:
+        type: string
+      example: "order_123456"
+  responses:
+    '200':
+      description: 订单撤销成功
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: '#/components/schemas/ApiResponse'
+              - type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      order_id:
+                        type: string
+                        description: 订单ID
+                      status:
+                        type: string
+                        description: 订单状态
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '404':
+      $ref: '#/components/responses/NotFound'
+    '500':
+      $ref: '#/components/responses/InternalServerError'

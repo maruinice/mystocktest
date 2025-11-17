@@ -1,0 +1,508 @@
+tags:
+  - 数据
+summary: 获取股票行情
+description: 获取指定股票的实时行情数据
+security:
+  - Bearer: []
+parameters:
+  - name: symbol
+    in: path
+    type: string
+    required: true
+    description: 股票代码
+    example: "000001"
+responses:
+  200:
+    description: 获取成功
+    schema:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          $ref: '#/definitions/Stock'
+  400:
+    description: 股票代码格式错误
+    schema:
+      $ref: '#/definitions/ErrorResponse'
+  401:
+    description: 未授权
+    schema:
+      $ref: '#/definitions/ErrorResponse'
+  404:
+    description: 股票不存在
+    schema:
+      $ref: '#/definitions/ErrorResponse'
+
+---
+tags:
+  - 数据
+summary: 批量获取股票行情
+description: 批量获取多只股票的实时行情数据
+security:
+  - Bearer: []
+parameters:
+  - name: symbols
+    in: query
+    type: string
+    required: true
+    description: 股票代码列表，用逗号分隔
+    example: "000001,000002,600000"
+responses:
+  200:
+    description: 获取成功
+    schema:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: array
+          items:
+            $ref: '#/definitions/Stock'
+  400:
+    description: 请求参数错误
+    schema:
+      $ref: '#/definitions/ErrorResponse'
+  401:
+    description: 未授权
+    schema:
+      $ref: '#/definitions/ErrorResponse'
+
+---
+tags:
+  - 数据
+summary: 获取历史数据
+description: 获取股票的历史价格数据
+security:
+  - Bearer: []
+parameters:
+  - name: symbol
+    in: path
+    type: string
+    required: true
+    description: 股票代码
+    example: "000001"
+  - name: start_date
+    in: query
+    type: string
+    format: date
+    required: true
+    description: 开始日期
+    example: "2024-01-01"
+  - name: end_date
+    in: query
+    type: string
+    format: date
+    required: true
+    description: 结束日期
+    example: "2024-03-31"
+  - name: frequency
+    in: query
+    type: string
+    enum: ["1d", "1w", "1M"]
+    default: "1d"
+    description: 数据频率
+    example: "1d"
+responses:
+  200:
+    description: 获取成功
+    schema:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: array
+          items:
+            type: object
+            properties:
+              date:
+                type: string
+                format: date
+                description: 日期
+              open:
+                type: number
+                format: float
+                description: 开盘价
+              high:
+                type: number
+                format: float
+                description: 最高价
+              low:
+                type: number
+                format: float
+                description: 最低价
+              close:
+                type: number
+                format: float
+                description: 收盘价
+              volume:
+                type: integer
+                description: 成交量
+  400:
+    description: 请求参数错误
+    schema:
+      $ref: '#/definitions/ErrorResponse'
+  401:
+    description: 未授权
+    schema:
+      $ref: '#/definitions/ErrorResponse'
+
+---
+tags:
+  - 数据
+summary: 获取技术指标
+description: 计算并获取股票的技术指标
+security:
+  - Bearer: []
+parameters:
+  - name: symbol
+    in: path
+    type: string
+    required: true
+    description: 股票代码
+    example: "000001"
+  - name: indicator
+    in: query
+    type: string
+    required: true
+    enum: ["ma", "ema", "rsi", "macd", "bollinger"]
+    description: 技术指标类型
+    example: "ma"
+  - name: period
+    in: query
+    type: integer
+    default: 20
+    minimum: 1
+    maximum: 200
+    description: 计算周期
+    example: 20
+  - name: start_date
+    in: query
+    type: string
+    format: date
+    description: 开始日期
+    example: "2024-01-01"
+  - name: end_date
+    in: query
+    type: string
+    format: date
+    description: 结束日期
+    example: "2024-03-31"
+responses:
+  200:
+    description: 获取成功
+    schema:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          properties:
+            indicator:
+              type: string
+              description: 指标名称
+            period:
+              type: integer
+              description: 计算周期
+            values:
+              type: array
+              items:
+                type: object
+                properties:
+                  date:
+                    type: string
+                    format: date
+                  value:
+                    type: number
+                    format: float
+  400:
+    description: 请求参数错误
+    schema:
+      $ref: '#/definitions/ErrorResponse'
+  401:
+    description: 未授权
+    schema:
+      $ref: '#/definitions/ErrorResponse'
+
+---
+tags:
+  - 数据
+summary: 获取市场概览
+description: 获取市场整体概览数据
+security:
+  - Bearer: []
+responses:
+  200:
+    description: 获取成功
+    schema:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          properties:
+            market_status:
+              type: string
+              enum: ["open", "closed", "pre_market", "after_hours"]
+              description: 市场状态
+            indices:
+              type: array
+              items:
+                type: object
+                properties:
+                  name:
+                    type: string
+                    description: 指数名称
+                  value:
+                    type: number
+                    format: float
+                    description: 指数值
+                  change:
+                    type: number
+                    format: float
+                    description: 涨跌额
+                  change_pct:
+                    type: number
+                    format: float
+                    description: 涨跌幅
+            statistics:
+              type: object
+              properties:
+                total_stocks:
+                  type: integer
+                  description: 总股票数
+                rising_stocks:
+                  type: integer
+                  description: 上涨股票数
+                falling_stocks:
+                  type: integer
+                  description: 下跌股票数
+                unchanged_stocks:
+                  type: integer
+                  description: 平盘股票数
+  401:
+    description: 未授权
+    schema:
+      $ref: '#/definitions/ErrorResponse'
+
+---
+tags:
+  - 数据
+summary: 获取行业表现
+description: 获取各行业的表现数据
+security:
+  - Bearer: []
+parameters:
+  - name: period
+    in: query
+    type: string
+    enum: ["1d", "1w", "1M", "3M", "1Y"]
+    default: "1d"
+    description: 统计周期
+    example: "1d"
+responses:
+  200:
+    description: 获取成功
+    schema:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: array
+          items:
+            type: object
+            properties:
+              industry:
+                type: string
+                description: 行业名称
+              change_pct:
+                type: number
+                format: float
+                description: 涨跌幅
+              stock_count:
+                type: integer
+                description: 股票数量
+              market_cap:
+                type: number
+                format: float
+                description: 市值
+  401:
+    description: 未授权
+    schema:
+      $ref: '#/definitions/ErrorResponse'
+
+---
+tags:
+  - 数据
+summary: 获取涨跌幅榜
+description: 获取涨跌幅排行榜
+security:
+  - Bearer: []
+parameters:
+  - name: type
+    in: query
+    type: string
+    enum: ["gainers", "losers", "most_active"]
+    default: "gainers"
+    description: 榜单类型
+    example: "gainers"
+  - name: limit
+    in: query
+    type: integer
+    default: 20
+    minimum: 1
+    maximum: 100
+    description: 返回数量
+    example: 20
+responses:
+  200:
+    description: 获取成功
+    schema:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: array
+          items:
+            $ref: '#/definitions/Stock'
+  401:
+    description: 未授权
+    schema:
+      $ref: '#/definitions/ErrorResponse'
+
+---
+tags:
+  - 数据
+summary: 搜索股票
+description: 根据股票代码或名称搜索股票
+security:
+  - Bearer: []
+parameters:
+  - name: query
+    in: query
+    type: string
+    required: true
+    minLength: 1
+    description: 搜索关键词
+    example: "平安"
+  - name: limit
+    in: query
+    type: integer
+    default: 10
+    minimum: 1
+    maximum: 50
+    description: 返回数量
+    example: 10
+responses:
+  200:
+    description: 搜索成功
+    schema:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: array
+          items:
+            type: object
+            properties:
+              symbol:
+                type: string
+                description: 股票代码
+              name:
+                type: string
+                description: 股票名称
+              industry:
+                type: string
+                description: 所属行业
+              market:
+                type: string
+                description: 所属市场
+  400:
+    description: 请求参数错误
+    schema:
+      $ref: '#/definitions/ErrorResponse'
+  401:
+    description: 未授权
+    schema:
+      $ref: '#/definitions/ErrorResponse'
+
+---
+tags:
+  - 数据
+summary: 获取财务数据
+description: 获取股票的财务报表数据
+security:
+  - Bearer: []
+parameters:
+  - name: symbol
+    in: path
+    type: string
+    required: true
+    description: 股票代码
+    example: "000001"
+  - name: report_type
+    in: query
+    type: string
+    enum: ["income", "balance", "cashflow"]
+    default: "income"
+    description: 报表类型
+    example: "income"
+  - name: period
+    in: query
+    type: string
+    enum: ["annual", "quarterly"]
+    default: "annual"
+    description: 报告期间
+    example: "annual"
+responses:
+  200:
+    description: 获取成功
+    schema:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: array
+          items:
+            type: object
+            properties:
+              period:
+                type: string
+                description: 报告期
+              revenue:
+                type: number
+                format: float
+                description: 营业收入
+              net_income:
+                type: number
+                format: float
+                description: 净利润
+              eps:
+                type: number
+                format: float
+                description: 每股收益
+  400:
+    description: 请求参数错误
+    schema:
+      $ref: '#/definitions/ErrorResponse'
+  401:
+    description: 未授权
+    schema:
+      $ref: '#/definitions/ErrorResponse'

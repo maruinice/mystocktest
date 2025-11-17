@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>菜单导航测试</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        .test-container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .test-item {
+            margin: 10px 0;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .success {
+            background-color: #f0f9ff;
+            border-color: #0ea5e9;
+        }
+        .test-link {
+            display: inline-block;
+            margin: 5px 10px 5px 0;
+            padding: 8px 16px;
+            background-color: #3b82f6;
+            color: white;
+            text-decoration: none;
+            border-radius: 4px;
+        }
+        .test-link:hover {
+            background-color: #2563eb;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>🧪 数据管理菜单导航测试</h1>
+        
+        <div class="test-item success">
+            <h3>✅ 路由修复完成</h3>
+            <p>已修复 <code>data-management.ts</code> 中的 request 导入问题</p>
+            <p><strong>修复内容：</strong> 将 <code>import { request }</code> 改为 <code>import request</code></p>
+        </div>
+        
+        <div class="test-item">
+            <h3>🔗 测试链接</h3>
+            <p>点击以下链接测试菜单导航功能：</p>
+            
+            <a href="http://localhost:3001/#/admin/dashboard" class="test-link" target="_blank">
+                📊 仪表盘
+            </a>
+            
+            <a href="http://localhost:3001/#/admin/data-management/data-sources" class="test-link" target="_blank">
+                🗄️ 数据源管理
+            </a>
+            
+            <a href="http://localhost:3001/#/admin/data-management/api-management" class="test-link" target="_blank">
+                🔌 API管理
+            </a>
+        </div>
+        
+        <div class="test-item">
+            <h3>📋 测试步骤</h3>
+            <ol>
+                <li>点击上方的"仪表盘"链接</li>
+                <li>在左侧菜单中找到"数据管理"菜单项</li>
+                <li>点击展开"数据管理"子菜单</li>
+                <li>分别点击"数据源管理"和"API管理"</li>
+                <li>验证页面能正常加载，无JavaScript错误</li>
+            </ol>
+        </div>
+        
+        <div class="test-item">
+            <h3>🎯 预期结果</h3>
+            <ul>
+                <li>✅ 菜单点击无JavaScript错误</li>
+                <li>✅ 路由跳转正常工作</li>
+                <li>✅ 页面内容正确显示</li>
+                <li>✅ 浏览器控制台无SyntaxError</li>
+            </ul>
+        </div>
+        
+        <div class="test-item success">
+            <h3>🚀 服务状态</h3>
+            <p><strong>前端服务：</strong> http://localhost:3001 ✅ 运行中</p>
+            <p><strong>后端服务：</strong> http://localhost:5000 ✅ 运行中</p>
+            <p><strong>数据库：</strong> ✅ 表已创建</p>
+        </div>
+    </div>
+    
+    <script>
+        console.log('🧪 菜单导航测试页面已加载');
+        console.log('📝 修复内容：request 导入问题已解决');
+        console.log('🔗 测试链接已准备就绪');
+    </script>
+</body>
+</html>

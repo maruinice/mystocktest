@@ -1,0 +1,696 @@
+tags:
+  - 系统
+summary: 健康检查
+description: 检查系统健康状态
+responses:
+  200:
+    description: 系统正常
+    schema:
+      type: object
+      properties:
+        status:
+          type: string
+          example: "healthy"
+        timestamp:
+          type: string
+          format: date-time
+          example: "2024-01-01T12:00:00Z"
+        version:
+          type: string
+          example: "1.0.0"
+  503:
+    description: 系统异常
+    schema:
+      type: object
+      properties:
+        status:
+          type: string
+          example: "unhealthy"
+        timestamp:
+          type: string
+          format: date-time
+        errors:
+          type: array
+          items:
+            type: string
+
+---
+tags:
+  - 系统
+summary: 详细健康检查
+description: 获取系统各组件的详细健康状态
+security:
+  - Bearer: []
+responses:
+  200:
+    description: 获取成功
+    schema:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: ["healthy", "degraded", "unhealthy"]
+          example: "healthy"
+        timestamp:
+          type: string
+          format: date-time
+        components:
+          type: object
+          properties:
+            database:
+              type: object
+              properties:
+                status:
+                  type: string
+                  enum: ["up", "down"]
+                response_time:
+                  type: number
+                  format: float
+                  description: 响应时间（毫秒）
+            redis:
+              type: object
+              properties:
+                status:
+                  type: string
+                  enum: ["up", "down"]
+                response_time:
+                  type: number
+                  format: float
+            external_api:
+              type: object
+              properties:
+                status:
+                  type: string
+                  enum: ["up", "down"]
+                response_time:
+                  type: number
+                  format: float
+        uptime:
+          type: number
+          format: float
+          description: 系统运行时间（秒）
+  401:
+    description: 未授权
+    schema:
+      $ref: '#/definitions/ErrorResponse'
+
+---
+tags:
+  - 系统
+summary: 就绪检查
+description: 检查系统是否就绪接受请求
+responses:
+  200:
+    description: 系统就绪
+    schema:
+      type: object
+      properties:
+        ready:
+          type: boolean
+          example: true
+        timestamp:
+          type: string
+          format: date-time
+  503:
+    description: 系统未就绪
+    schema:
+      type: object
+      properties:
+        ready:
+          type: boolean
+          example: false
+        timestamp:
+          type: string
+          format: date-time
+        reason:
+          type: string
+
+---
+tags:
+  - 系统
+summary: 存活检查
+description: 检查系统是否存活
+responses:
+  200:
+    description: 系统存活
+    schema:
+      type: object
+      properties:
+        alive:
+          type: boolean
+          example: true
+        timestamp:
+          type: string
+          format: date-time
+
+---
+tags:
+  - 系统
+summary: 获取系统信息
+description: 获取系统基本信息
+security:
+  - Bearer: []
+responses:
+  200:
+    description: 获取成功
+    schema:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          properties:
+            name:
+              type: string
+              example: "Stock AI Trading System"
+            version:
+              type: string
+              example: "1.0.0"
+            environment:
+              type: string
+              enum: ["development", "testing", "production"]
+              example: "production"
+            build_time:
+              type: string
+              format: date-time
+            uptime:
+              type: number
+              format: float
+              description: 系统运行时间（秒）
+            python_version:
+              type: string
+              example: "3.9.0"
+            flask_version:
+              type: string
+              example: "2.3.0"
+  401:
+    description: 未授权
+    schema:
+      $ref: '#/definitions/ErrorResponse'
+
+---
+tags:
+  - 系统
+summary: 获取系统统计
+description: 获取系统运行统计信息
+security:
+  - Bearer: []
+responses:
+  200:
+    description: 获取成功
+    schema:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          properties:
+            total_users:
+              type: integer
+              description: 总用户数
+            active_users:
+              type: integer
+              description: 活跃用户数
+            total_orders:
+              type: integer
+              description: 总订单数
+            total_trades:
+              type: integer
+              description: 总交易数
+            total_volume:
+              type: number
+              format: float
+              description: 总交易量
+            system_load:
+              type: object
+              properties:
+                cpu_usage:
+                  type: number
+                  format: float
+                  description: CPU使用率
+                memory_usage:
+                  type: number
+                  format: float
+                  description: 内存使用率
+                disk_usage:
+                  type: number
+                  format: float
+                  description: 磁盘使用率
+  401:
+    description: 未授权
+    schema:
+      $ref: '#/definitions/ErrorResponse'
+
+---
+tags:
+  - 系统
+summary: 获取API统计
+description: 获取API调用统计信息
+security:
+  - Bearer: []
+parameters:
+  - name: period
+    in: query
+    type: string
+    enum: ["1h", "1d", "1w", "1M"]
+    default: "1d"
+    description: 统计周期
+    example: "1d"
+responses:
+  200:
+    description: 获取成功
+    schema:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          properties:
+            period:
+              type: string
+              description: 统计周期
+            total_requests:
+              type: integer
+              description: 总请求数
+            successful_requests:
+              type: integer
+              description: 成功请求数
+            failed_requests:
+              type: integer
+              description: 失败请求数
+            avg_response_time:
+              type: number
+              format: float
+              description: 平均响应时间（毫秒）
+            endpoints:
+              type: array
+              items:
+                type: object
+                properties:
+                  endpoint:
+                    type: string
+                    description: 接口路径
+                  method:
+                    type: string
+                    description: HTTP方法
+                  requests:
+                    type: integer
+                    description: 请求数
+                  avg_response_time:
+                    type: number
+                    format: float
+                    description: 平均响应时间
+  401:
+    description: 未授权
+    schema:
+      $ref: '#/definitions/ErrorResponse'
+
+---
+tags:
+  - 系统
+summary: 获取系统配置
+description: 获取系统配置信息
+security:
+  - Bearer: []
+responses:
+  200:
+    description: 获取成功
+    schema:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          properties:
+            trading:
+              type: object
+              properties:
+                market_hours:
+                  type: object
+                  properties:
+                    start:
+                      type: string
+                      example: "09:30"
+                    end:
+                      type: string
+                      example: "15:00"
+                commission_rate:
+                  type: number
+                  format: float
+                  example: 0.0003
+                min_order_amount:
+                  type: number
+                  format: float
+                  example: 1000.0
+            features:
+              type: object
+              properties:
+                auto_trading:
+                  type: boolean
+                  example: true
+                paper_trading:
+                  type: boolean
+                  example: true
+                real_trading:
+                  type: boolean
+                  example: false
+            limits:
+              type: object
+              properties:
+                max_positions:
+                  type: integer
+                  example: 50
+                max_order_size:
+                  type: number
+                  format: float
+                  example: 1000000.0
+  401:
+    description: 未授权
+    schema:
+      $ref: '#/definitions/ErrorResponse'
+
+---
+tags:
+  - 系统
+summary: 更新系统配置
+description: 更新系统配置（管理员权限）
+security:
+  - Bearer: []
+parameters:
+  - name: config
+    in: body
+    required: true
+    schema:
+      type: object
+      properties:
+        trading:
+          type: object
+          properties:
+            commission_rate:
+              type: number
+              format: float
+              minimum: 0
+              maximum: 0.01
+            min_order_amount:
+              type: number
+              format: float
+              minimum: 100
+        features:
+          type: object
+          properties:
+            auto_trading:
+              type: boolean
+            paper_trading:
+              type: boolean
+            real_trading:
+              type: boolean
+        limits:
+          type: object
+          properties:
+            max_positions:
+              type: integer
+              minimum: 1
+              maximum: 100
+            max_order_size:
+              type: number
+              format: float
+              minimum: 1000
+responses:
+  200:
+    description: 更新成功
+    schema:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: "配置更新成功"
+  400:
+    description: 请求参数错误
+    schema:
+      $ref: '#/definitions/ErrorResponse'
+  401:
+    description: 未授权
+    schema:
+      $ref: '#/definitions/ErrorResponse'
+  403:
+    description: 权限不足
+    schema:
+      $ref: '#/definitions/ErrorResponse'
+
+---
+tags:
+  - 系统
+summary: 获取功能开关
+description: 获取系统功能开关状态
+security:
+  - Bearer: []
+responses:
+  200:
+    description: 获取成功
+    schema:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          properties:
+            maintenance_mode:
+              type: boolean
+              description: 维护模式
+            new_user_registration:
+              type: boolean
+              description: 新用户注册
+            trading_enabled:
+              type: boolean
+              description: 交易功能
+            data_feed_enabled:
+              type: boolean
+              description: 数据源
+            strategy_enabled:
+              type: boolean
+              description: 策略功能
+  401:
+    description: 未授权
+    schema:
+      $ref: '#/definitions/ErrorResponse'
+
+---
+tags:
+  - 系统
+summary: 启用维护模式
+description: 启用系统维护模式（管理员权限）
+security:
+  - Bearer: []
+parameters:
+  - name: maintenance
+    in: body
+    required: true
+    schema:
+      type: object
+      properties:
+        message:
+          type: string
+          description: 维护通知消息
+          example: "系统正在维护中，预计1小时后恢复"
+        estimated_duration:
+          type: integer
+          description: 预计维护时长（分钟）
+          example: 60
+responses:
+  200:
+    description: 维护模式启用成功
+    schema:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: "维护模式已启用"
+  401:
+    description: 未授权
+    schema:
+      $ref: '#/definitions/ErrorResponse'
+  403:
+    description: 权限不足
+    schema:
+      $ref: '#/definitions/ErrorResponse'
+
+---
+tags:
+  - 系统
+summary: 禁用维护模式
+description: 禁用系统维护模式（管理员权限）
+security:
+  - Bearer: []
+responses:
+  200:
+    description: 维护模式禁用成功
+    schema:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: "维护模式已禁用"
+  401:
+    description: 未授权
+    schema:
+      $ref: '#/definitions/ErrorResponse'
+  403:
+    description: 权限不足
+    schema:
+      $ref: '#/definitions/ErrorResponse'
+
+---
+tags:
+  - 系统
+summary: 获取维护状态
+description: 获取系统维护状态
+responses:
+  200:
+    description: 获取成功
+    schema:
+      type: object
+      properties:
+        maintenance_mode:
+          type: boolean
+          example: false
+        message:
+          type: string
+          example: ""
+        estimated_end_time:
+          type: string
+          format: date-time
+          description: 预计结束时间
+
+---
+tags:
+  - 系统
+summary: 清除缓存
+description: 清除系统缓存（管理员权限）
+security:
+  - Bearer: []
+parameters:
+  - name: cache_type
+    in: query
+    type: string
+    enum: ["all", "user", "market", "strategy"]
+    default: "all"
+    description: 缓存类型
+    example: "all"
+responses:
+  200:
+    description: 缓存清除成功
+    schema:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: "缓存清除成功"
+  401:
+    description: 未授权
+    schema:
+      $ref: '#/definitions/ErrorResponse'
+  403:
+    description: 权限不足
+    schema:
+      $ref: '#/definitions/ErrorResponse'
+
+---
+tags:
+  - 系统
+summary: 获取系统日志
+description: 获取系统日志（管理员权限）
+security:
+  - Bearer: []
+parameters:
+  - name: level
+    in: query
+    type: string
+    enum: ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
+    description: 日志级别过滤
+    example: "ERROR"
+  - name: start_time
+    in: query
+    type: string
+    format: date-time
+    description: 开始时间
+    example: "2024-01-01T00:00:00Z"
+  - name: end_time
+    in: query
+    type: string
+    format: date-time
+    description: 结束时间
+    example: "2024-01-01T23:59:59Z"
+  - name: limit
+    in: query
+    type: integer
+    default: 100
+    minimum: 1
+    maximum: 1000
+    description: 返回数量
+    example: 100
+responses:
+  200:
+    description: 获取成功
+    schema:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: array
+          items:
+            type: object
+            properties:
+              timestamp:
+                type: string
+                format: date-time
+                description: 时间戳
+              level:
+                type: string
+                description: 日志级别
+              logger:
+                type: string
+                description: 记录器名称
+              message:
+                type: string
+                description: 日志消息
+              module:
+                type: string
+                description: 模块名称
+              function:
+                type: string
+                description: 函数名称
+              line:
+                type: integer
+                description: 行号
+  401:
+    description: 未授权
+    schema:
+      $ref: '#/definitions/ErrorResponse'
+  403:
+    description: 权限不足
+    schema:
+      $ref: '#/definitions/ErrorResponse'

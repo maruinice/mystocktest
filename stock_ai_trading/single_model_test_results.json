@@ -1,0 +1,40 @@
+{
+  "summary": {
+    "total_tests": 4,
+    "passed_tests": 4,
+    "failed_tests": 0,
+    "success_rate": 100.0,
+    "total_time": 38.912062883377075,
+    "timestamp": "2025-10-28T17:55:38.682308"
+  },
+  "test_results": [
+    {
+      "test_name": "健康检查",
+      "success": true,
+      "details": "服务正常运行",
+      "response_time": 0,
+      "timestamp": "2025-10-28T17:55:01.818305"
+    },
+    {
+      "test_name": "LLM适配器检查",
+      "success": true,
+      "details": "DeepSeek适配器已注册，共1个适配器",
+      "response_time": 0,
+      "timestamp": "2025-10-28T17:55:04.873795"
+    },
+    {
+      "test_name": "DeepSeek聊天测试",
+      "success": true,
+      "details": "响应成功，内容长度: 431字符",
+      "response_time": 12.31456208229065,
+      "timestamp": "2025-10-28T17:55:18.188869"
+    },
+    {
+      "test_name": "单模型决策测试",
+      "success": true,
+      "details": "决策: BUY, 置信度: 0.55",
+      "response_time": 18.490800142288208,
+      "timestamp": "2025-10-28T17:55:37.680321"
+    }
+  ]
+}

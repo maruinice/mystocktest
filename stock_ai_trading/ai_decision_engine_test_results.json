@@ -1,0 +1,204 @@
+[
+  {
+    "test_name": "健康检查",
+    "success": true,
+    "message": "AI决策引擎运行正常",
+    "data": {
+      "status": "healthy",
+      "modules": {
+        "instruction_parser": "healthy",
+        "confidence_assessor": "healthy",
+        "model_fusion": "healthy",
+        "instruction_generator": "healthy",
+        "llm_gateway": "healthy"
+      },
+      "performance_stats": {
+        "total_decisions": 0,
+        "successful_decisions": 0,
+        "failed_decisions": 0,
+        "average_confidence": 0.0,
+        "average_processing_time": 0.0
+      },
+      "decision_history_count": 0,
+      "timestamp": "2025-10-28T17:44:34.784301"
+    },
+    "timestamp": "2025-10-28T17:44:34.785108"
+  },
+  {
+    "test_name": "示例数据 - /examples/market-data",
+    "success": true,
+    "message": "示例数据获取成功",
+    "data": {
+      "endpoint": "/examples/market-data",
+      "data_keys": [
+        "symbol",
+        "current_price",
+        "volume",
+        "turnover",
+        "high",
+        "low",
+        "open",
+        "close",
+        "change",
+        "change_pct",
+        "market_cap",
+        "pe_ratio",
+        "pb_ratio",
+        "volatility",
+        "rsi",
+        "macd",
+        "bollinger_upper",
+        "bollinger_lower",
+        "support_level",
+        "resistance_level",
+        "timestamp"
+      ]
+    },
+    "timestamp": "2025-10-28T17:44:36.832187"
+  },
+  {
+    "test_name": "示例数据 - /examples/portfolio-context",
+    "success": true,
+    "message": "示例数据获取成功",
+    "data": {
+      "endpoint": "/examples/portfolio-context",
+      "data_keys": [
+        "total_value",
+        "available_cash",
+        "positions",
+        "risk_tolerance",
+        "max_position_size",
+        "max_single_trade",
+        "stop_loss_pct",
+        "take_profit_pct"
+      ]
+    },
+    "timestamp": "2025-10-28T17:44:38.883558"
+  },
+  {
+    "test_name": "示例数据 - /examples/instruction",
+    "success": true,
+    "message": "示例数据获取成功",
+    "data": {
+      "endpoint": "/examples/instruction",
+      "data_keys": [
+        "simple_instructions",
+        "complex_instructions",
+        "conditional_instructions"
+      ]
+    },
+    "timestamp": "2025-10-28T17:44:40.939263"
+  },
+  {
+    "test_name": "指令解析 - 买入平安银行1000股...",
+    "success": true,
+    "message": "解析成功，置信度: 1.00",
+    "data": {
+      "original_instruction": "买入平安银行1000股",
+      "standardized_instructions": [
+        "买入 平安银行 1000股 市价单"
+      ],
+      "instruction_type": "MARKET_ORDER",
+      "confidence": 1.0,
+      "ambiguity_score": 0.0,
+      "conflicts": [],
+      "suggestions": [],
+      "timestamp": "2025-10-28T17:44:43.009875"
+    },
+    "timestamp": "2025-10-28T17:44:43.010885"
+  },
+  {
+    "test_name": "指令解析 - 如果上证指数突破3200点，买入银行板块...",
+    "success": true,
+    "message": "解析成功，置信度: 0.80",
+    "data": {
+      "original_instruction": "如果上证指数突破3200点，买入银行板块龙头股票",
+      "standardized_instructions": [
+        "买入 买入银行板块龙头 条件单"
+      ],
+      "instruction_type": "CONDITIONAL_ORDER",
+      "confidence": 0.8,
+      "ambiguity_score": 0.2,
+      "conflicts": [],
+      "suggestions": [
+        "建议指定具体的交易数量"
+      ],
+      "timestamp": "2025-10-28T17:44:45.074414"
+    },
+    "timestamp": "2025-10-28T17:44:45.075123"
+  },
+  {
+    "test_name": "指令解析 - 当RSI超过70时卖出所有腾讯股票...",
+    "success": true,
+    "message": "解析成功，置信度: 0.80",
+    "data": {
+      "original_instruction": "当RSI超过70时卖出所有腾讯股票",
+      "standardized_instructions": [
+        "卖出 RSI 条件单"
+      ],
+      "instruction_type": "CONDITIONAL_ORDER",
+      "confidence": 0.8,
+      "ambiguity_score": 0.2,
+      "conflicts": [],
+      "suggestions": [
+        "建议指定具体的交易数量"
+      ],
+      "timestamp": "2025-10-28T17:44:47.137217"
+    },
+    "timestamp": "2025-10-28T17:44:47.138133"
+  },
+  {
+    "test_name": "单模型决策",
+    "success": false,
+    "message": "HTTP状态码: 500",
+    "data": "{\"success\":false,\"message\":\"单模型决策失败: LLM调用失败: Error code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': None, 'code': 'invalid_request_error'}}\",\"error_code\":500}",
+    "timestamp": "2025-10-28T17:45:05.500759"
+  },
+  {
+    "test_name": "多模型融合决策",
+    "success": false,
+    "message": "HTTP状态码: 500",
+    "data": "{\"success\":false,\"message\":\"多模型融合决策失败: 指令解析失败，无法生成标准化指令\",\"error_code\":500}",
+    "timestamp": "2025-10-28T17:45:22.593812"
+  },
+  {
+    "test_name": "完整工作流",
+    "success": false,
+    "message": "工作流执行失败",
+    "data": {
+      "success": false,
+      "data": {
+        "workflow_id": "6845722c-17a4-4231-bb54-d0baf2fe2396",
+        "instruction": "根据技术分析，如果平安银行突破支撑位，建议适量买入",
+        "error": "LLM调用失败: No available adapters",
+        "processing_time": 15.042898,
+        "timestamp": "2025-10-28T17:45:24.647699",
+        "success": false
+      }
+    },
+    "timestamp": "2025-10-28T17:45:39.691565"
+  },
+  {
+    "test_name": "性能统计",
+    "success": true,
+    "message": "总决策数: 1, 成功率: 0.0%, 平均置信度: 0.00, 平均耗时: 15.04秒",
+    "data": {
+      "total_decisions": 1,
+      "successful_decisions": 0,
+      "failed_decisions": 1,
+      "average_confidence": 0.0,
+      "average_processing_time": 15.042898
+    },
+    "timestamp": "2025-10-28T17:45:41.740042"
+  },
+  {
+    "test_name": "决策历史",
+    "success": true,
+    "message": "历史记录总数: 0, 最近5条记录数: 0",
+    "data": {
+      "total_count": 0,
+      "recent_count": 0
+    },
+    "timestamp": "2025-10-28T17:45:43.802748"
+  }
+]

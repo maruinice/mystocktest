@@ -1,0 +1,322 @@
+tags:
+  - 认证
+summary: 用户注册
+description: 创建新用户账户
+parameters:
+  - name: user_data
+    in: body
+    required: true
+    schema:
+      type: object
+      required:
+        - username
+        - email
+        - password
+      properties:
+        username:
+          type: string
+          minLength: 3
+          maxLength: 50
+          description: 用户名
+          example: "testuser"
+        email:
+          type: string
+          format: email
+          description: 邮箱地址
+          example: "test@example.com"
+        password:
+          type: string
+          minLength: 8
+          description: 密码
+          example: "Test123!@#"
+        full_name:
+          type: string
+          maxLength: 100
+          description: 全名
+          example: "测试用户"
+responses:
+  201:
+    description: 注册成功
+    schema:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: "用户注册成功"
+        data:
+          type: object
+          properties:
+            user_id:
+              type: integer
+              example: 1
+            username:
+              type: string
+              example: "testuser"
+            email:
+              type: string
+              example: "test@example.com"
+  400:
+    description: 请求参数错误
+    schema:
+      $ref: '#/definitions/ErrorResponse'
+  409:
+    description: 用户已存在
+    schema:
+      $ref: '#/definitions/ErrorResponse'
+
+---
+tags:
+  - 认证
+summary: 用户登录
+description: 用户身份验证
+parameters:
+  - name: credentials
+    in: body
+    required: true
+    schema:
+      type: object
+      required:
+        - username
+        - password
+      properties:
+        username:
+          type: string
+          description: 用户名或邮箱
+          example: "testuser"
+        password:
+          type: string
+          description: 密码
+          example: "Test123!@#"
+responses:
+  200:
+    description: 登录成功
+    schema:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: "登录成功"
+        data:
+          type: object
+          properties:
+            access_token:
+              type: string
+              description: 访问令牌
+              example: "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9..."
+            refresh_token:
+              type: string
+              description: 刷新令牌
+              example: "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9..."
+            expires_in:
+              type: integer
+              description: 令牌过期时间(秒)
+              example: 3600
+            user:
+              $ref: '#/definitions/User'
+  400:
+    description: 请求参数错误
+    schema:
+      $ref: '#/definitions/ErrorResponse'
+  401:
+    description: 用户名或密码错误
+    schema:
+      $ref: '#/definitions/ErrorResponse'
+
+---
+tags:
+  - 认证
+summary: 刷新令牌
+description: 使用刷新令牌获取新的访问令牌
+security:
+  - Bearer: []
+parameters:
+  - name: refresh_data
+    in: body
+    required: true
+    schema:
+      type: object
+      required:
+        - refresh_token
+      properties:
+        refresh_token:
+          type: string
+          description: 刷新令牌
+          example: "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9..."
+responses:
+  200:
+    description: 刷新成功
+    schema:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: "令牌刷新成功"
+        data:
+          type: object
+          properties:
+            access_token:
+              type: string
+              description: 新的访问令牌
+              example: "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9..."
+            expires_in:
+              type: integer
+              description: 令牌过期时间(秒)
+              example: 3600
+  400:
+    description: 请求参数错误
+    schema:
+      $ref: '#/definitions/ErrorResponse'
+  401:
+    description: 刷新令牌无效或已过期
+    schema:
+      $ref: '#/definitions/ErrorResponse'
+
+---
+tags:
+  - 认证
+summary: 用户登出
+description: 注销当前用户会话
+security:
+  - Bearer: []
+responses:
+  200:
+    description: 登出成功
+    schema:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: "登出成功"
+  401:
+    description: 未授权
+    schema:
+      $ref: '#/definitions/ErrorResponse'
+
+---
+tags:
+  - 认证
+summary: 获取用户资料
+description: 获取当前用户的详细信息
+security:
+  - Bearer: []
+responses:
+  200:
+    description: 获取成功
+    schema:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          $ref: '#/definitions/User'
+  401:
+    description: 未授权
+    schema:
+      $ref: '#/definitions/ErrorResponse'
+
+---
+tags:
+  - 认证
+summary: 更新用户资料
+description: 更新当前用户的信息
+security:
+  - Bearer: []
+parameters:
+  - name: user_data
+    in: body
+    required: true
+    schema:
+      type: object
+      properties:
+        full_name:
+          type: string
+          maxLength: 100
+          description: 全名
+          example: "新的用户名"
+        email:
+          type: string
+          format: email
+          description: 邮箱地址
+          example: "newemail@example.com"
+responses:
+  200:
+    description: 更新成功
+    schema:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: "用户资料更新成功"
+        data:
+          $ref: '#/definitions/User'
+  400:
+    description: 请求参数错误
+    schema:
+      $ref: '#/definitions/ErrorResponse'
+  401:
+    description: 未授权
+    schema:
+      $ref: '#/definitions/ErrorResponse'
+
+---
+tags:
+  - 认证
+summary: 修改密码
+description: 修改当前用户的密码
+security:
+  - Bearer: []
+parameters:
+  - name: password_data
+    in: body
+    required: true
+    schema:
+      type: object
+      required:
+        - old_password
+        - new_password
+      properties:
+        old_password:
+          type: string
+          description: 当前密码
+          example: "OldPassword123"
+        new_password:
+          type: string
+          minLength: 8
+          description: 新密码
+          example: "NewPassword123"
+responses:
+  200:
+    description: 修改成功
+    schema:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: "密码修改成功"
+  400:
+    description: 请求参数错误
+    schema:
+      $ref: '#/definitions/ErrorResponse'
+  401:
+    description: 当前密码错误
+    schema:
+      $ref: '#/definitions/ErrorResponse'

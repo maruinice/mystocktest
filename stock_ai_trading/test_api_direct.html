@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>API测试</title>
+</head>
+<body>
+    <h1>直接测试API</h1>
+    <button onclick="testWithoutAuth()">测试无认证</button>
+    <button onclick="testWithAuth()">测试有认证</button>
+    <button onclick="testLogin()">先登录</button>
+    <pre id="result"></pre>
+
+    <script>
+        const API_BASE = 'http://127.0.0.1:5000';
+        let token = localStorage.getItem('token');
+
+        async function testWithoutAuth() {
+            try {
+                const response = await fetch(`${API_BASE}/api/data-sync/sync/status`);
+                const data = await response.json();
+                document.getElementById('result').textContent = 
+                    `状态码: ${response.status}\n` +
+                    `响应: ${JSON.stringify(data, null, 2)}`;
+            } catch (error) {
+                document.getElementById('result').textContent = `错误: ${error.message}`;
+            }
+        }
+
+        async function testWithAuth() {
+            try {
+                const response = await fetch(`${API_BASE}/api/data-sync/sync/status`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                const data = await response.json();
+                document.getElementById('result').textContent = 
+                    `状态码: ${response.status}\n` +
+                    `响应: ${JSON.stringify(data, null, 2)}`;
+            } catch (error) {
+                document.getElementById('result').textContent = `错误: ${error.message}`;
+            }
+        }
+
+        async function testLogin() {
+            try {
+                const response = await fetch(`${API_BASE}/api/auth/login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        username: 'admin',
+                        password: 'admin123'
+                    })
+                });
+                const data = await response.json();
+                if (data.success) {
+                    token = data.data.token;
+                    localStorage.setItem('token', token);
+                    document.getElementById('result').textContent = 
+                        `登录成功！\nToken: ${token.substring(0, 50)}...`;
+                } else {
+                    document.getElementById('result').textContent = 
+                        `登录失败: ${data.message}`;
+                }
+            } catch (error) {
+                document.getElementById('result').textContent = `错误: ${error.message}`;
+            }
+        }
+    </script>
+</body>
+</html>

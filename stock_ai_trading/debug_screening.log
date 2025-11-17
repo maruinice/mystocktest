@@ -1,0 +1,84 @@
+[DEBUG] _perform_screening 开始，custom_conditions: {'debt_ratio': {'min': 0, 'max': 60}, 'current_ratio': {'min': 1, 'max': 1.5}, 'quick_ratio': {'min': 1, 'max': 3}, 'revenue_growth': {'min': 10, 'max': 100}, 'profit_growth': {'min': 10, 'max': 100}, 'roe': {'min': 10, 'max': 50}, 'roa': {'min': 5, 'max': 30}, 'eps': {'min': 0.5, 'max': 10}, 'rsi12': {'min': 30, 'max': 70}, 'kdj_k': {'min': 20, 'max': 80}, 'kdj_d': {'min': 20, 'max': 80}, 'turnover_rate': {'min': 0, 'max': 50}, 'volume_ratio': {'min': 1, 'max': 10}, 'change_pct': {'min': -5, 'max': 20}}
+[DEBUG] 获取基础数据完成，行数: 500
+[DEBUG] _apply_screening_conditions 开始，输入数据行数: 500
+[DEBUG] 条件类型: <class 'dict'>, 条件内容: {'debt_ratio': {'min': 0, 'max': 60}, 'current_ratio': {'min': 1, 'max': 1.5}, 'quick_ratio': {'min': 1, 'max': 3}, 'revenue_growth': {'min': 10, 'max': 100}, 'profit_growth': {'min': 10, 'max': 100}, 'roe': {'min': 10, 'max': 50}, 'roa': {'min': 5, 'max': 30}, 'eps': {'min': 0.5, 'max': 10}, 'rsi12': {'min': 30, 'max': 70}, 'kdj_k': {'min': 20, 'max': 80}, 'kdj_d': {'min': 20, 'max': 80}, 'turnover_rate': {'min': 0, 'max': 50}, 'volume_ratio': {'min': 1, 'max': 10}, 'change_pct': {'min': -5, 'max': 20}}
+[DEBUG] _perform_screening 开始，custom_conditions: {'debt_ratio': {'min': 0, 'max': 60}, 'current_ratio': {'min': 1, 'max': 1.5}, 'quick_ratio': {'min': 1, 'max': 3}, 'revenue_growth': {'min': 10, 'max': 100}, 'profit_growth': {'min': 10, 'max': 100}, 'roe': {'min': 10, 'max': 50}, 'roa': {'min': 5, 'max': 30}, 'eps': {'min': 0.5, 'max': 10}, 'rsi12': {'min': 30, 'max': 70}, 'kdj_k': {'min': 20, 'max': 80}, 'kdj_d': {'min': 20, 'max': 80}, 'turnover_rate': {'min': 0, 'max': 50}, 'volume_ratio': {'min': 1, 'max': 10}, 'change_pct': {'min': -5, 'max': 20}}
+[DEBUG] 获取基础数据完成，行数: 500
+[DEBUG] _apply_screening_conditions 开始，输入数据行数: 500
+[DEBUG] 条件类型: <class 'dict'>, 条件内容: {'debt_ratio': {'min': 0, 'max': 60}, 'current_ratio': {'min': 1, 'max': 1.5}, 'quick_ratio': {'min': 1, 'max': 3}, 'revenue_growth': {'min': 10, 'max': 100}, 'profit_growth': {'min': 10, 'max': 100}, 'roe': {'min': 10, 'max': 50}, 'roa': {'min': 5, 'max': 30}, 'eps': {'min': 0.5, 'max': 10}, 'rsi12': {'min': 30, 'max': 70}, 'kdj_k': {'min': 20, 'max': 80}, 'kdj_d': {'min': 20, 'max': 80}, 'turnover_rate': {'min': 0, 'max': 50}, 'volume_ratio': {'min': 1, 'max': 10}, 'change_pct': {'min': -5, 'max': 20}}
+[DEBUG] _perform_screening 开始，custom_conditions: {'debt_ratio': {'min': 0, 'max': 60}, 'current_ratio': {'min': 1, 'max': 1.5}, 'quick_ratio': {'min': 1, 'max': 3}, 'revenue_growth': {'min': 10, 'max': 100}, 'profit_growth': {'min': 10, 'max': 100}, 'roe': {'min': 10, 'max': 50}, 'roa': {'min': 5, 'max': 30}, 'eps': {'min': 0.5, 'max': 10}, 'rsi12': {'min': 30, 'max': 70}, 'kdj_k': {'min': 20, 'max': 80}, 'kdj_d': {'min': 20, 'max': 80}, 'turnover_rate': {'min': 0, 'max': 50}, 'volume_ratio': {'min': 1, 'max': 10}, 'change_pct': {'min': -5, 'max': 20}}
+[DEBUG] 获取基础数据完成，行数: 500
+[DEBUG] _apply_screening_conditions 开始，输入数据行数: 500
+[DEBUG] 条件类型: <class 'dict'>, 条件内容: {'debt_ratio': {'min': 0, 'max': 60}, 'current_ratio': {'min': 1, 'max': 1.5}, 'quick_ratio': {'min': 1, 'max': 3}, 'revenue_growth': {'min': 10, 'max': 100}, 'profit_growth': {'min': 10, 'max': 100}, 'roe': {'min': 10, 'max': 50}, 'roa': {'min': 5, 'max': 30}, 'eps': {'min': 0.5, 'max': 10}, 'rsi12': {'min': 30, 'max': 70}, 'kdj_k': {'min': 20, 'max': 80}, 'kdj_d': {'min': 20, 'max': 80}, 'turnover_rate': {'min': 0, 'max': 50}, 'volume_ratio': {'min': 1, 'max': 10}, 'change_pct': {'min': -5, 'max': 20}}
+[DEBUG] _perform_screening 开始，custom_conditions: {'debt_ratio': {'min': 0, 'max': 60}, 'current_ratio': {'min': 1, 'max': 1.5}, 'quick_ratio': {'min': 1, 'max': 3}, 'revenue_growth': {'min': 10, 'max': 100}, 'profit_growth': {'min': 10, 'max': 100}, 'roe': {'min': 10, 'max': 50}, 'roa': {'min': 5, 'max': 30}, 'eps': {'min': 0.5, 'max': 10}, 'rsi12': {'min': 30, 'max': 70}, 'kdj_k': {'min': 20, 'max': 80}, 'kdj_d': {'min': 20, 'max': 80}, 'turnover_rate': {'min': 0, 'max': 50}, 'volume_ratio': {'min': 1, 'max': 10}, 'change_pct': {'min': -5, 'max': 20}}
+[DEBUG] 获取基础数据完成，行数: 500
+[DEBUG] _apply_screening_conditions 开始，输入数据行数: 500
+[DEBUG] 条件类型: <class 'dict'>, 条件内容: {'debt_ratio': {'min': 0, 'max': 60}, 'current_ratio': {'min': 1, 'max': 1.5}, 'quick_ratio': {'min': 1, 'max': 3}, 'revenue_growth': {'min': 10, 'max': 100}, 'profit_growth': {'min': 10, 'max': 100}, 'roe': {'min': 10, 'max': 50}, 'roa': {'min': 5, 'max': 30}, 'eps': {'min': 0.5, 'max': 10}, 'rsi12': {'min': 30, 'max': 70}, 'kdj_k': {'min': 20, 'max': 80}, 'kdj_d': {'min': 20, 'max': 80}, 'turnover_rate': {'min': 0, 'max': 50}, 'volume_ratio': {'min': 1, 'max': 10}, 'change_pct': {'min': -5, 'max': 20}}
+[DEBUG] _perform_screening 开始，custom_conditions: {'debt_ratio': {'min': 0, 'max': 60}, 'current_ratio': {'min': 1, 'max': 1.5}, 'quick_ratio': {'min': 1, 'max': 3}, 'revenue_growth': {'min': 10, 'max': 100}, 'profit_growth': {'min': 10, 'max': 100}, 'roe': {'min': 10, 'max': 50}, 'roa': {'min': 5, 'max': 30}, 'eps': {'min': 0.5, 'max': 10}, 'rsi12': {'min': 30, 'max': 70}, 'kdj_k': {'min': 20, 'max': 80}, 'kdj_d': {'min': 20, 'max': 80}, 'turnover_rate': {'min': 0, 'max': 50}, 'volume_ratio': {'min': 1, 'max': 10}, 'change_pct': {'min': -5, 'max': 20}}
+[DEBUG] 获取基础数据完成，行数: 500
+[DEBUG] _apply_screening_conditions 开始，输入数据行数: 500
+[DEBUG] 条件类型: <class 'dict'>, 条件内容: {'debt_ratio': {'min': 0, 'max': 60}, 'current_ratio': {'min': 1, 'max': 1.5}, 'quick_ratio': {'min': 1, 'max': 3}, 'revenue_growth': {'min': 10, 'max': 100}, 'profit_growth': {'min': 10, 'max': 100}, 'roe': {'min': 10, 'max': 50}, 'roa': {'min': 5, 'max': 30}, 'eps': {'min': 0.5, 'max': 10}, 'rsi12': {'min': 30, 'max': 70}, 'kdj_k': {'min': 20, 'max': 80}, 'kdj_d': {'min': 20, 'max': 80}, 'turnover_rate': {'min': 0, 'max': 50}, 'volume_ratio': {'min': 1, 'max': 10}, 'change_pct': {'min': -5, 'max': 20}}
+[DEBUG] _perform_screening 开始，custom_conditions: {'debt_ratio': {'min': 0, 'max': 60}, 'current_ratio': {'min': 1.5, 'max': 5}, 'quick_ratio': {'min': 1, 'max': 3}, 'revenue_growth': {'min': 10, 'max': 100}, 'roe': {'min': 10, 'max': 50}, 'roa': {'min': 5, 'max': 30}, 'rsi12': {'min': 30, 'max': 70}, 'kdj_k': {'min': 20, 'max': 80}, 'kdj_d': {'min': 20, 'max': 80}, 'change_pct': {'min': -5, 'max': 20}}
+[DEBUG] 获取基础数据完成，行数: 500
+[DEBUG] _apply_screening_conditions 开始，输入数据行数: 500
+[DEBUG] 条件类型: <class 'dict'>, 条件内容: {'debt_ratio': {'min': 0, 'max': 60}, 'current_ratio': {'min': 1.5, 'max': 5}, 'quick_ratio': {'min': 1, 'max': 3}, 'revenue_growth': {'min': 10, 'max': 100}, 'roe': {'min': 10, 'max': 50}, 'roa': {'min': 5, 'max': 30}, 'rsi12': {'min': 30, 'max': 70}, 'kdj_k': {'min': 20, 'max': 80}, 'kdj_d': {'min': 20, 'max': 80}, 'change_pct': {'min': -5, 'max': 20}}
+[DEBUG] _perform_screening 开始，custom_conditions: {'volume_ratio': {'min': 0, 'max': 5}, 'net_margin': {'min': 3, 'max': 50}, 'gross_margin': {'min': 10, 'max': 100}, 'roe': {'min': 5, 'max': 50}, 'pe_ttm': {'min': 0, 'max': 60}, 'pb_mrq': {'min': 0, 'max': 8}, 'debt_ratio': {'min': 0, 'max': 70}}
+[DEBUG] 获取基础数据完成，行数: 500
+[DEBUG] _apply_screening_conditions 开始，输入数据行数: 500
+[DEBUG] 条件类型: <class 'dict'>, 条件内容: {'volume_ratio': {'min': 0, 'max': 5}, 'net_margin': {'min': 3, 'max': 50}, 'gross_margin': {'min': 10, 'max': 100}, 'roe': {'min': 5, 'max': 50}, 'pe_ttm': {'min': 0, 'max': 60}, 'pb_mrq': {'min': 0, 'max': 8}, 'debt_ratio': {'min': 0, 'max': 70}}
+[DEBUG] _perform_screening 开始，custom_conditions: {'volume_ratio': {'min': 0, 'max': 5}, 'net_margin': {'min': 3, 'max': 50}, 'gross_margin': {'min': 10, 'max': 100}, 'roe': {'min': 5, 'max': 50}, 'pe_ttm': {'min': 0, 'max': 60}, 'pb_mrq': {'min': 0, 'max': 8}, 'debt_ratio': {'min': 0, 'max': 70}}
+[DEBUG] 获取基础数据完成，行数: 500
+[DEBUG] _apply_screening_conditions 开始，输入数据行数: 500
+[DEBUG] 条件类型: <class 'dict'>, 条件内容: {'volume_ratio': {'min': 0, 'max': 5}, 'net_margin': {'min': 3, 'max': 50}, 'gross_margin': {'min': 10, 'max': 100}, 'roe': {'min': 5, 'max': 50}, 'pe_ttm': {'min': 0, 'max': 60}, 'pb_mrq': {'min': 0, 'max': 8}, 'debt_ratio': {'min': 0, 'max': 70}}
+[DEBUG] _perform_screening 开始，custom_conditions: {'net_margin': {'min': 3, 'max': 50}, 'gross_margin': {'min': 10, 'max': 100}, 'roe': {'min': 5, 'max': 50}, 'pe_ttm': {'min': 0, 'max': 60}, 'pb_mrq': {'min': 0, 'max': 8}, 'debt_ratio': {'min': 0, 'max': 70}}
+[DEBUG] 获取基础数据完成，行数: 500
+[DEBUG] _apply_screening_conditions 开始，输入数据行数: 500
+[DEBUG] 条件类型: <class 'dict'>, 条件内容: {'net_margin': {'min': 3, 'max': 50}, 'gross_margin': {'min': 10, 'max': 100}, 'roe': {'min': 5, 'max': 50}, 'pe_ttm': {'min': 0, 'max': 60}, 'pb_mrq': {'min': 0, 'max': 8}, 'debt_ratio': {'min': 0, 'max': 70}}
+[DEBUG] _perform_screening 开始，custom_conditions: {'net_margin': {'min': 3, 'max': 50}, 'gross_margin': {'min': 10, 'max': 100}, 'roe': {'min': 5, 'max': 50}, 'pe_ttm': {'min': 0, 'max': 60}, 'pb_mrq': {'min': 0, 'max': 8}, 'debt_ratio': {'min': 0, 'max': 70}}
+[DEBUG] 获取基础数据完成，行数: 500
+[DEBUG] _apply_screening_conditions 开始，输入数据行数: 500
+[DEBUG] 条件类型: <class 'dict'>, 条件内容: {'net_margin': {'min': 3, 'max': 50}, 'gross_margin': {'min': 10, 'max': 100}, 'roe': {'min': 5, 'max': 50}, 'pe_ttm': {'min': 0, 'max': 60}, 'pb_mrq': {'min': 0, 'max': 8}, 'debt_ratio': {'min': 0, 'max': 70}}
+[DEBUG] _perform_screening 开始，custom_conditions: {'net_margin': {'min': 3, 'max': 50}, 'gross_margin': {'min': 10, 'max': 100}, 'roe': {'min': 5, 'max': 50}, 'pe_ttm': {'min': 0, 'max': 60}, 'pb_mrq': {'min': 0, 'max': 8}, 'debt_ratio': {'min': 0, 'max': 70}}
+[DEBUG] 获取基础数据完成，行数: 500
+[DEBUG] _apply_screening_conditions 开始，输入数据行数: 500
+[DEBUG] 条件类型: <class 'dict'>, 条件内容: {'net_margin': {'min': 3, 'max': 50}, 'gross_margin': {'min': 10, 'max': 100}, 'roe': {'min': 5, 'max': 50}, 'pe_ttm': {'min': 0, 'max': 60}, 'pb_mrq': {'min': 0, 'max': 8}, 'debt_ratio': {'min': 0, 'max': 70}}
+[DEBUG] _perform_screening 开始，custom_conditions: {'net_margin': {'min': 3, 'max': 50}, 'gross_margin': {'min': 10, 'max': 100}, 'roe': {'min': 5, 'max': 50}, 'pe_ttm': {'min': 0, 'max': 60}, 'pb_mrq': {'min': 0, 'max': 8}, 'debt_ratio': {'min': 0, 'max': 70}}
+[DEBUG] 获取基础数据完成，行数: 500
+[DEBUG] _apply_screening_conditions 开始，输入数据行数: 500
+[DEBUG] 条件类型: <class 'dict'>, 条件内容: {'net_margin': {'min': 3, 'max': 50}, 'gross_margin': {'min': 10, 'max': 100}, 'roe': {'min': 5, 'max': 50}, 'pe_ttm': {'min': 0, 'max': 60}, 'pb_mrq': {'min': 0, 'max': 8}, 'debt_ratio': {'min': 0, 'max': 70}}
+[DEBUG] _perform_screening 开始，custom_conditions: {'net_margin': {'min': 3, 'max': 50}, 'gross_margin': {'min': 10, 'max': 100}, 'roe': {'min': 5, 'max': 50}, 'pe_ttm': {'min': 0, 'max': 60}, 'pb_mrq': {'min': 0, 'max': 8}, 'debt_ratio': {'min': 0, 'max': 70}}
+[DEBUG] 获取基础数据完成，行数: 500
+[DEBUG] _apply_screening_conditions 开始，输入数据行数: 500
+[DEBUG] 条件类型: <class 'dict'>, 条件内容: {'net_margin': {'min': 3, 'max': 50}, 'gross_margin': {'min': 10, 'max': 100}, 'roe': {'min': 5, 'max': 50}, 'pe_ttm': {'min': 0, 'max': 60}, 'pb_mrq': {'min': 0, 'max': 8}, 'debt_ratio': {'min': 0, 'max': 70}}
+[DEBUG] _perform_screening 开始，custom_conditions: {'pe': {'min': 0, 'max': 30}}
+[DEBUG] 获取基础数据完成，行数: 500
+[DEBUG] _apply_screening_conditions 开始，输入数据行数: 500
+[DEBUG] 条件类型: <class 'dict'>, 条件内容: {'pe': {'min': 0, 'max': 30}}
+[DEBUG] _perform_screening 开始，custom_conditions: {'roe': {'min': 5, 'max': 50}, 'gross_margin': {'min': 10, 'max': 100}, 'net_margin': {'min': 3, 'max': 50}}
+[DEBUG] 获取基础数据完成，行数: 500
+[DEBUG] _apply_screening_conditions 开始，输入数据行数: 500
+[DEBUG] 条件类型: <class 'dict'>, 条件内容: {'roe': {'min': 5, 'max': 50}, 'gross_margin': {'min': 10, 'max': 100}, 'net_margin': {'min': 3, 'max': 50}}
+[DEBUG] _perform_screening 开始，custom_conditions: {'roe': {'min': 5, 'max': 50}, 'gross_margin': {'min': 10, 'max': 100}, 'net_margin': {'min': 3, 'max': 50}, 'pe_ttm': {'min': 0, 'max': 60}, 'pb': {'min': 0, 'max': 8}}
+[DEBUG] 获取基础数据完成，行数: 500
+[DEBUG] _apply_screening_conditions 开始，输入数据行数: 500
+[DEBUG] 条件类型: <class 'dict'>, 条件内容: {'roe': {'min': 5, 'max': 50}, 'gross_margin': {'min': 10, 'max': 100}, 'net_margin': {'min': 3, 'max': 50}, 'pe_ttm': {'min': 0, 'max': 60}, 'pb': {'min': 0, 'max': 8}}
+[DEBUG] _perform_screening 开始，custom_conditions: {'roe': {'min': 5, 'max': 50}, 'gross_margin': {'min': 10, 'max': 100}, 'net_margin': {'min': 3, 'max': 50}, 'pe_ttm': {'min': 0, 'max': 60}, 'debt_ratio': {'min': 0, 'max': 70}}
+[DEBUG] 获取基础数据完成，行数: 500
+[DEBUG] _apply_screening_conditions 开始，输入数据行数: 500
+[DEBUG] 条件类型: <class 'dict'>, 条件内容: {'roe': {'min': 5, 'max': 50}, 'gross_margin': {'min': 10, 'max': 100}, 'net_margin': {'min': 3, 'max': 50}, 'pe_ttm': {'min': 0, 'max': 60}, 'debt_ratio': {'min': 0, 'max': 70}}
+[DEBUG] _perform_screening 开始，custom_conditions: {'roe': {'min': 5, 'max': 50}, 'gross_margin': {'min': 10, 'max': 100}, 'net_margin': {'min': 3, 'max': 50}, 'pe_ttm': {'min': 0, 'max': 60}, 'debt_ratio': {'min': 0, 'max': 70}}
+[DEBUG] 获取基础数据完成，行数: 500
+[DEBUG] _apply_screening_conditions 开始，输入数据行数: 500
+[DEBUG] 条件类型: <class 'dict'>, 条件内容: {'roe': {'min': 5, 'max': 50}, 'gross_margin': {'min': 10, 'max': 100}, 'net_margin': {'min': 3, 'max': 50}, 'pe_ttm': {'min': 0, 'max': 60}, 'debt_ratio': {'min': 0, 'max': 70}}
+[DEBUG] _perform_screening 开始，custom_conditions: {'roe': {'min': 5, 'max': 50}, 'gross_margin': {'min': 10, 'max': 100}, 'net_margin': {'min': 3, 'max': 50}, 'pe_ttm': {'min': 0, 'max': 60}, 'debt_ratio': {'min': 0, 'max': 70}}
+[DEBUG] 获取基础数据完成，行数: 500
+[DEBUG] _apply_screening_conditions 开始，输入数据行数: 500
+[DEBUG] 条件类型: <class 'dict'>, 条件内容: {'roe': {'min': 5, 'max': 50}, 'gross_margin': {'min': 10, 'max': 100}, 'net_margin': {'min': 3, 'max': 50}, 'pe_ttm': {'min': 0, 'max': 60}, 'debt_ratio': {'min': 0, 'max': 70}}
+[DEBUG] _perform_screening 开始，custom_conditions: {'roe': {'min': 5, 'max': 50}, 'gross_margin': {'min': 10, 'max': 100}, 'net_margin': {'min': 3, 'max': 50}, 'pe_ttm': {'min': 0, 'max': 60}, 'debt_ratio': {'min': 0, 'max': 70}}
+[DEBUG] 获取基础数据完成，行数: 500
+[DEBUG] _apply_screening_conditions 开始，输入数据行数: 500
+[DEBUG] 条件类型: <class 'dict'>, 条件内容: {'roe': {'min': 5, 'max': 50}, 'gross_margin': {'min': 10, 'max': 100}, 'net_margin': {'min': 3, 'max': 50}, 'pe_ttm': {'min': 0, 'max': 60}, 'debt_ratio': {'min': 0, 'max': 70}}
+[DEBUG] _perform_screening 开始，custom_conditions: {}
+[DEBUG] 获取基础数据完成，行数: 500
+[DEBUG] _apply_screening_conditions 开始，输入数据行数: 500
+[DEBUG] 条件类型: <class 'dict'>, 条件内容: {'rsi': {'max': 70, 'min': 30}, 'volume_ratio': {'max': None, 'min': 1.5}, 'price_above_ma20': True}

@@ -1,0 +1,108 @@
+version: '3.8'
+
+services:
+  # FastAPI Application
+  app:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=mysql+pymysql://root:password@mysql:3306/stock_trading
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/1
+      - CELERY_RESULT_BACKEND=redis://redis:6379/2
+    depends_on:
+      - mysql
+      - redis
+    volumes:
+      - .:/app
+    restart: unless-stopped
+    networks:
+      - stock-trading-network
+
+  # Celery Worker
+  celery-worker:
+    build: .
+    command: celery -A app.tasks.celery_app worker --loglevel=info
+    environment:
+      - DATABASE_URL=mysql+pymysql://root:password@mysql:3306/stock_trading
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/1
+      - CELERY_RESULT_BACKEND=redis://redis:6379/2
+    depends_on:
+      - mysql
+      - redis
+    volumes:
+      - .:/app
+    restart: unless-stopped
+    networks:
+      - stock-trading-network
+
+  # Celery Beat (Scheduler)
+  celery-beat:
+    build: .
+    command: celery -A app.tasks.celery_app beat --loglevel=info
+    environment:
+      - DATABASE_URL=mysql+pymysql://root:password@mysql:3306/stock_trading
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/1
+      - CELERY_RESULT_BACKEND=redis://redis:6379/2
+    depends_on:
+      - mysql
+      - redis
+    volumes:
+      - .:/app
+    restart: unless-stopped
+    networks:
+      - stock-trading-network
+
+  # Flower (Celery Monitoring)
+  flower:
+    build: .
+    command: celery -A app.tasks.celery_app flower --port=5555
+    ports:
+      - "5555:5555"
+    environment:
+      - CELERY_BROKER_URL=redis://redis:6379/1
+      - CELERY_RESULT_BACKEND=redis://redis:6379/2
+    depends_on:
+      - redis
+    restart: unless-stopped
+    networks:
+      - stock-trading-network
+
+  # MySQL Database
+  mysql:
+    image: mysql:8.0
+    environment:
+      - MYSQL_ROOT_PASSWORD=password
+      - MYSQL_DATABASE=stock_trading
+      - MYSQL_USER=trading_user
+      - MYSQL_PASSWORD=trading_password
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    restart: unless-stopped
+    networks:
+      - stock-trading-network
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+    networks:
+      - stock-trading-network
+
+volumes:
+  mysql_data:
+  redis_data:
+
+networks:
+  stock-trading-network:
+    driver: bridge

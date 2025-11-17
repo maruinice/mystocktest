@@ -1,0 +1,724 @@
+tags:
+  - 策略
+summary: 运行回测
+description: 运行策略回测
+security:
+  - Bearer: []
+parameters:
+  - name: backtest
+    in: body
+    required: true
+    schema:
+      type: object
+      required:
+        - strategy_id
+        - start_date
+        - end_date
+        - initial_capital
+      properties:
+        strategy_id:
+          type: string
+          description: 策略ID
+          example: "ma_crossover"
+        start_date:
+          type: string
+          format: date
+          description: 回测开始日期
+          example: "2024-01-01"
+        end_date:
+          type: string
+          format: date
+          description: 回测结束日期
+          example: "2024-03-31"
+        initial_capital:
+          type: number
+          format: float
+          minimum: 10000
+          description: 初始资金
+          example: 100000.0
+        symbols:
+          type: array
+          items:
+            type: string
+          description: 股票代码列表
+          example: ["000001", "000002", "600000"]
+        parameters:
+          type: object
+          description: 策略参数
+          example:
+            short_window: 5
+            long_window: 20
+responses:
+  201:
+    description: 回测启动成功
+    schema:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          properties:
+            backtest_id:
+              type: string
+              description: 回测ID
+            status:
+              type: string
+              enum: ["running", "completed", "failed"]
+              description: 回测状态
+            created_at:
+              type: string
+              format: date-time
+              description: 创建时间
+  400:
+    description: 请求参数错误
+    schema:
+      $ref: '#/definitions/ErrorResponse'
+  401:
+    description: 未授权
+    schema:
+      $ref: '#/definitions/ErrorResponse'
+
+---
+tags:
+  - 策略
+summary: 获取回测结果
+description: 获取指定回测的结果
+security:
+  - Bearer: []
+parameters:
+  - name: backtest_id
+    in: path
+    type: string
+    required: true
+    description: 回测ID
+    example: "bt_123456789"
+responses:
+  200:
+    description: 获取成功
+    schema:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          $ref: '#/definitions/BacktestResult'
+  401:
+    description: 未授权
+    schema:
+      $ref: '#/definitions/ErrorResponse'
+  404:
+    description: 回测结果不存在
+    schema:
+      $ref: '#/definitions/ErrorResponse'
+
+---
+tags:
+  - 策略
+summary: 获取回测历史
+description: 获取用户的回测历史记录
+security:
+  - Bearer: []
+parameters:
+  - name: strategy_id
+    in: query
+    type: string
+    description: 策略ID过滤
+    example: "ma_crossover"
+  - name: status
+    in: query
+    type: string
+    enum: ["running", "completed", "failed"]
+    description: 状态过滤
+    example: "completed"
+  - name: start_date
+    in: query
+    type: string
+    format: date
+    description: 开始日期
+    example: "2024-01-01"
+  - name: end_date
+    in: query
+    type: string
+    format: date
+    description: 结束日期
+    example: "2024-03-31"
+  - name: page
+    in: query
+    type: integer
+    default: 1
+    minimum: 1
+    description: 页码
+    example: 1
+  - name: per_page
+    in: query
+    type: integer
+    default: 20
+    minimum: 1
+    maximum: 100
+    description: 每页数量
+    example: 20
+responses:
+  200:
+    description: 获取成功
+    schema:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: array
+          items:
+            type: object
+            properties:
+              backtest_id:
+                type: string
+                description: 回测ID
+              strategy_id:
+                type: string
+                description: 策略ID
+              strategy_name:
+                type: string
+                description: 策略名称
+              start_date:
+                type: string
+                format: date
+                description: 回测开始日期
+              end_date:
+                type: string
+                format: date
+                description: 回测结束日期
+              initial_capital:
+                type: number
+                format: float
+                description: 初始资金
+              final_value:
+                type: number
+                format: float
+                description: 最终价值
+              total_return:
+                type: number
+                format: float
+                description: 总收益率
+              status:
+                type: string
+                enum: ["running", "completed", "failed"]
+                description: 状态
+              created_at:
+                type: string
+                format: date-time
+                description: 创建时间
+        pagination:
+          $ref: '#/definitions/PaginationInfo'
+  401:
+    description: 未授权
+    schema:
+      $ref: '#/definitions/ErrorResponse'
+
+---
+tags:
+  - 策略
+summary: 获取交易信号
+description: 获取策略的交易信号
+security:
+  - Bearer: []
+parameters:
+  - name: strategy_id
+    in: query
+    type: string
+    required: true
+    description: 策略ID
+    example: "ma_crossover"
+  - name: symbols
+    in: query
+    type: string
+    description: 股票代码列表，用逗号分隔
+    example: "000001,000002,600000"
+  - name: limit
+    in: query
+    type: integer
+    default: 20
+    minimum: 1
+    maximum: 100
+    description: 返回数量
+    example: 20
+responses:
+  200:
+    description: 获取成功
+    schema:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: array
+          items:
+            type: object
+            properties:
+              symbol:
+                type: string
+                description: 股票代码
+              name:
+                type: string
+                description: 股票名称
+              signal:
+                type: string
+                enum: ["buy", "sell", "hold"]
+                description: 交易信号
+              strength:
+                type: number
+                format: float
+                minimum: 0
+                maximum: 1
+                description: 信号强度
+              price:
+                type: number
+                format: float
+                description: 当前价格
+              target_price:
+                type: number
+                format: float
+                description: 目标价格
+              stop_loss:
+                type: number
+                format: float
+                description: 止损价格
+              confidence:
+                type: number
+                format: float
+                minimum: 0
+                maximum: 1
+                description: 信号置信度
+              timestamp:
+                type: string
+                format: date-time
+                description: 信号生成时间
+  400:
+    description: 请求参数错误
+    schema:
+      $ref: '#/definitions/ErrorResponse'
+  401:
+    description: 未授权
+    schema:
+      $ref: '#/definitions/ErrorResponse'
+
+---
+tags:
+  - 策略
+summary: 获取最新信号
+description: 获取策略的最新交易信号
+security:
+  - Bearer: []
+parameters:
+  - name: strategy_id
+    in: path
+    type: string
+    required: true
+    description: 策略ID
+    example: "ma_crossover"
+  - name: symbol
+    in: query
+    type: string
+    description: 股票代码
+    example: "000001"
+responses:
+  200:
+    description: 获取成功
+    schema:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          properties:
+            symbol:
+              type: string
+              description: 股票代码
+            name:
+              type: string
+              description: 股票名称
+            signal:
+              type: string
+              enum: ["buy", "sell", "hold"]
+              description: 交易信号
+            strength:
+              type: number
+              format: float
+              minimum: 0
+              maximum: 1
+              description: 信号强度
+            price:
+              type: number
+              format: float
+              description: 当前价格
+            target_price:
+              type: number
+              format: float
+              description: 目标价格
+            stop_loss:
+              type: number
+              format: float
+              description: 止损价格
+            confidence:
+              type: number
+              format: float
+              minimum: 0
+              maximum: 1
+              description: 信号置信度
+            timestamp:
+              type: string
+              format: date-time
+              description: 信号生成时间
+  401:
+    description: 未授权
+    schema:
+      $ref: '#/definitions/ErrorResponse'
+  404:
+    description: 信号不存在
+    schema:
+      $ref: '#/definitions/ErrorResponse'
+
+---
+tags:
+  - 策略
+summary: 选择策略
+description: 选择并激活交易策略
+security:
+  - Bearer: []
+parameters:
+  - name: strategy
+    in: body
+    required: true
+    schema:
+      type: object
+      required:
+        - strategy_id
+      properties:
+        strategy_id:
+          type: string
+          description: 策略ID
+          example: "ma_crossover"
+        parameters:
+          type: object
+          description: 策略参数
+          example:
+            short_window: 5
+            long_window: 20
+        symbols:
+          type: array
+          items:
+            type: string
+          description: 应用的股票代码列表
+          example: ["000001", "000002", "600000"]
+        auto_trade:
+          type: boolean
+          default: false
+          description: 是否启用自动交易
+          example: false
+responses:
+  200:
+    description: 策略选择成功
+    schema:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: "策略选择成功"
+        data:
+          type: object
+          properties:
+            strategy_id:
+              type: string
+              description: 策略ID
+            strategy_name:
+              type: string
+              description: 策略名称
+            status:
+              type: string
+              enum: ["active", "inactive"]
+              description: 策略状态
+            activated_at:
+              type: string
+              format: date-time
+              description: 激活时间
+  400:
+    description: 请求参数错误
+    schema:
+      $ref: '#/definitions/ErrorResponse'
+  401:
+    description: 未授权
+    schema:
+      $ref: '#/definitions/ErrorResponse'
+  404:
+    description: 策略不存在
+    schema:
+      $ref: '#/definitions/ErrorResponse'
+
+---
+tags:
+  - 策略
+summary: 获取活跃策略
+description: 获取当前活跃的策略
+security:
+  - Bearer: []
+responses:
+  200:
+    description: 获取成功
+    schema:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          properties:
+            strategy_id:
+              type: string
+              description: 策略ID
+            strategy_name:
+              type: string
+              description: 策略名称
+            description:
+              type: string
+              description: 策略描述
+            parameters:
+              type: object
+              description: 策略参数
+            symbols:
+              type: array
+              items:
+                type: string
+              description: 应用的股票代码列表
+            auto_trade:
+              type: boolean
+              description: 是否启用自动交易
+            status:
+              type: string
+              enum: ["active", "inactive"]
+              description: 策略状态
+            activated_at:
+              type: string
+              format: date-time
+              description: 激活时间
+            performance:
+              type: object
+              properties:
+                total_return:
+                  type: number
+                  format: float
+                  description: 总收益率
+                win_rate:
+                  type: number
+                  format: float
+                  description: 胜率
+                max_drawdown:
+                  type: number
+                  format: float
+                  description: 最大回撤
+  401:
+    description: 未授权
+    schema:
+      $ref: '#/definitions/ErrorResponse'
+  404:
+    description: 没有活跃策略
+    schema:
+      $ref: '#/definitions/ErrorResponse'
+
+---
+tags:
+  - 策略
+summary: 获取可用策略
+description: 获取所有可用的策略列表
+security:
+  - Bearer: []
+responses:
+  200:
+    description: 获取成功
+    schema:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: array
+          items:
+            $ref: '#/definitions/Strategy'
+  401:
+    description: 未授权
+    schema:
+      $ref: '#/definitions/ErrorResponse'
+
+---
+tags:
+  - 策略
+summary: 获取策略表现
+description: 获取策略的历史表现数据
+security:
+  - Bearer: []
+parameters:
+  - name: strategy_id
+    in: path
+    type: string
+    required: true
+    description: 策略ID
+    example: "ma_crossover"
+  - name: period
+    in: query
+    type: string
+    enum: ["1d", "1w", "1M", "3M", "6M", "1Y"]
+    default: "1M"
+    description: 统计周期
+    example: "1M"
+responses:
+  200:
+    description: 获取成功
+    schema:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          properties:
+            strategy_id:
+              type: string
+              description: 策略ID
+            strategy_name:
+              type: string
+              description: 策略名称
+            period:
+              type: string
+              description: 统计周期
+            total_return:
+              type: number
+              format: float
+              description: 总收益率
+            annualized_return:
+              type: number
+              format: float
+              description: 年化收益率
+            volatility:
+              type: number
+              format: float
+              description: 波动率
+            sharpe_ratio:
+              type: number
+              format: float
+              description: 夏普比率
+            max_drawdown:
+              type: number
+              format: float
+              description: 最大回撤
+            win_rate:
+              type: number
+              format: float
+              description: 胜率
+            profit_factor:
+              type: number
+              format: float
+              description: 盈利因子
+            total_trades:
+              type: integer
+              description: 总交易次数
+            performance_chart:
+              type: array
+              items:
+                type: object
+                properties:
+                  date:
+                    type: string
+                    format: date
+                  value:
+                    type: number
+                    format: float
+              description: 表现图表数据
+  401:
+    description: 未授权
+    schema:
+      $ref: '#/definitions/ErrorResponse'
+  404:
+    description: 策略不存在
+    schema:
+      $ref: '#/definitions/ErrorResponse'
+
+---
+tags:
+  - 策略
+summary: 停止策略
+description: 停止当前活跃的策略
+security:
+  - Bearer: []
+parameters:
+  - name: strategy_id
+    in: path
+    type: string
+    required: true
+    description: 策略ID
+    example: "ma_crossover"
+responses:
+  200:
+    description: 策略停止成功
+    schema:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: "策略停止成功"
+  401:
+    description: 未授权
+    schema:
+      $ref: '#/definitions/ErrorResponse'
+  404:
+    description: 策略不存在或未激活
+    schema:
+      $ref: '#/definitions/ErrorResponse'
+
+---
+tags:
+  - 策略
+summary: 启动策略
+description: 启动指定的策略
+security:
+  - Bearer: []
+parameters:
+  - name: strategy_id
+    in: path
+    type: string
+    required: true
+    description: 策略ID
+    example: "ma_crossover"
+responses:
+  200:
+    description: 策略启动成功
+    schema:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: "策略启动成功"
+  401:
+    description: 未授权
+    schema:
+      $ref: '#/definitions/ErrorResponse'
+  404:
+    description: 策略不存在
+    schema:
+      $ref: '#/definitions/ErrorResponse'
