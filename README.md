@@ -29,33 +29,30 @@
 
 前端主要依赖：`vue`、`pinia`、`vue-router`、`element-plus`、`echarts`、`axios`、`vite`
 
-## 快速启动（本地开发）
+## 快速启动（Windows）
 
-### 1. 后端（Flask API）
+### 1. 启动后端与 WebSocket（使用脚本）
 
-- 进入后端目录并安装依赖：
-  - Windows：`cd stock_ai_trading && python -m venv .venv && .\.venv\Scripts\pip install -r requirements.txt`
-  - macOS/Linux：`cd stock_ai_trading && python3 -m venv .venv && source .venv/bin/pip install -r requirements.txt`
-- 复制环境变量示例：`cp .env.example .env`（Windows 可手工复制），并按下文“环境变量与 Token 配置”填写
-- 启动 Flask API：`python run_flask.py --host 0.0.0.0 --port 5000 --debug`
-- 打开接口文档：`http://localhost:5000/apidocs/`（或 `http://localhost:5000/docs/`）
+- 进入后端目录：`cd stock_ai_trading`
+- 首次运行准备：
+  - 创建虚拟环境并安装依赖：`python -m venv .venv && .\\.venv\\Scripts\\pip install -r requirements.txt`
+  - 复制环境变量示例：将 `.env.example` 复制为 `.env` 并按下文“环境变量与 Token 配置”填写
+- 启动所有服务：运行 `start_services.bat`
+- 停止所有服务：运行 `stop_services.bat`
+- 接口文档：`http://localhost:5000/apidocs/` 或 `http://localhost:5000/docs/`
 
-可选服务：
-- 启动 WebSocket 服务器：`python start_websocket.py`（默认端口 `8765`，可通过 `WS_PORT` 修改）
-- 启动 Celery Worker：`celery -A app.tasks.celery_app worker --loglevel=info`
-- 启动 Celery Beat（定时任务）：`celery -A app.tasks.celery_app beat --loglevel=info`
+说明：脚本将分别启动 Flask API（端口 `5000`）与 WebSocket（端口 `8765`），并自动进行端口占用检查。
 
-### 2. 前端（Vue3 + Vite）
+### 2. 启动前端（Vue3 + Vite）
 
 - 进入前端目录并安装依赖：`cd stock-ai-frontend && npm install`
-- 配置 API 地址（开发环境默认已指向后端）：
+- 按需调整开发环境变量：
   - `stock-ai-frontend/.env.development` 中 `VITE_API_BASE_URL=http://localhost:5000/api`
-  - WebSocket 默认：`VITE_WS_URL=ws://localhost:8765`
-- 启动开发服务器：`npm run dev`（默认端口 `5173`）
+  - `VITE_WS_URL=ws://localhost:8765`
+- 启动开发服务器：`npm run dev`
+- 访问地址：`http://localhost:5173`
 
-访问前端：`http://localhost:5173`
-
-## 一键启动（Docker Compose）
+## 部署（Docker Compose，可选）
 
 - 进入后端目录：`cd stock_ai_trading`
 - 根据需要将 `.env.example` 复制为 `.env` 并填写必要变量
@@ -125,4 +122,4 @@
 
 ## 许可证
 
-MIT（如需变更请在仓库根目录添加 `LICENSE`）
+MIT
