@@ -1,3 +1,80 @@
-.spec-workflow
-.trae
-.venv
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Logs
+*.log
+logs/
+
+# Celery
+celerybeat-schedule.*
+celerybeat-schedule/
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Test results
+*.json
+!package.json
+!package-lock.json
+!tsconfig.json
+test_response.json
+ai_decision_engine_test_results.json
+single_model_test_results.json
+
+# Temporary files
+*.tmp
+*.bak
+*.swp
+*.swo
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Frontend
+node_modules/
+dist/
+.nuxt/
+.output/
+
+# Windows batch files (project uses Linux)
+*.bat
+
+# Temporary text files
+立即执行.txt
+立即修复404.txt
+如何运行.txt
+快速参考.txt
+数据在哪里.txt
+START_HERE.txt
+RUN_THIS.txt
+
+# Test HTML files
+test_api_direct.html
