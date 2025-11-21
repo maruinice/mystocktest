@@ -37,7 +37,7 @@ export const tradingApi = {
   },
 
   // 获取持仓列表
-  getPositions(symbol?: string): Promise<{ data: Position[] }> {
+  getPositions(symbol?: string): Promise<{ data: { positions: Position[]; total: number } }> {
     const params = symbol ? { symbol } : undefined
     return http.get('/trade/positions', { params })
   },

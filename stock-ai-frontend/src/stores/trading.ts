@@ -53,7 +53,7 @@ export const useTradingStore = defineStore('trading', () => {
     error.value = null
     try {
       const response = await tradingApi.getPositions(symbol)
-      positions.value = response.data
+      positions.value = response.data.positions || []
       return response
     } catch (err: any) {
       error.value = err.message || '获取持仓失败'

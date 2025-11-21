@@ -1043,6 +1043,149 @@ def get_market_summary():
             "error": "获取市场概况失败"
         }), 500
 
+@data_bp.route('/news', methods=['GET'])
+@require_auth
+def get_news():
+    """获取新闻（支持按股票代码筛选）"""
+    try:
+        # 获取查询参数
+        symbol = request.args.get('symbol')
+        category = request.args.get('category')
+        page = int(request.args.get('page', 1))
+        page_size = int(request.args.get('page_size', 20))
+        
+        # 验证分页参数
+        is_valid, message = DataValidator.validate_pagination(page, page_size)
+        if not is_valid:
+            return jsonify({
+                "success": False,
+                "error": message
+            }), 400
+        
+        # 获取新闻数据
+        if symbol:
+            # 如果指定了股票代码，获取该股票的新闻
+            news = data_service.get_stock_news(
+                code=symbol,
+                limit=page_size
+            )
+        else:
+            # 否则返回通用新闻（这里简化处理，返回模拟数据）
+            news = []
+            for i in range(page_size):
+                date = datetime.now() - timedelta(days=i)
+                news.append({
+                    "id": f"news_{i}",
+                    "title": f"市场重要新闻{i+1}",
+                    "summary": f"这是市场新闻摘要{i+1}",
+                    "content": f"这是市场新闻详细内容{i+1}",
+                    "source": "财经新闻网",
+                    "publish_time": date.isoformat(),
+                    "url": f"https://news.example.com/{i}",
+                    "symbol": None
+                })
+        
+        # 分页处理
+        total = len(news)
+        start = (page - 1) * page_size
+        end = start + page_size
+        paginated_news = news[start:end]
+        
+        return jsonify({
+            "success": True,
+            "data": {
+                "news": paginated_news,
+                "total": total,
+                "page": page,
+                "page_size": page_size,
+                "total_pages": (total + page_size - 1) // page_size
+            }
+        })
+        
+    except ValueError as e:
+        return jsonify({
+            "success": False,
+            "error": f"参数错误: {str(e)}"
+        }), 400
+    except Exception as e:
+        logger.error(f"获取新闻失败: {str(e)}")
+        return jsonify({
+            "success": False,
+            "error": "获取新闻失败"
+        }), 500
+
+@data_bp.route('/analysis', methods=['GET'])
+@require_auth
+def get_analysis_reports():
+    """获取分析报告（支持按股票代码筛选）"""
+    try:
+        # 获取查询参数
+        symbol = request.args.get('symbol')
+        analyst = request.args.get('analyst')
+        page = int(request.args.get('page', 1))
+        page_size = int(request.args.get('page_size', 20))
+        
+        # 验证分页参数
+        is_valid, message = DataValidator.validate_pagination(page, page_size)
+        if not is_valid:
+            return jsonify({
+                "success": False,
+                "error": message
+            }), 400
+        
+        # 获取分析报告
+        if symbol:
+            # 如果指定了股票代码，获取该股票的分析报告
+            reports = data_service.get_stock_analysis(
+                code=symbol,
+                limit=page_size
+            )
+        else:
+            # 否则返回通用分析报告（这里简化处理，返回模拟数据）
+            reports = []
+            for i in range(page_size):
+                date = datetime.now() - timedelta(days=i*7)
+                reports.append({
+                    "id": f"report_{i}",
+                    "title": f"市场分析报告{i+1}",
+                    "analyst": f"分析师{i+1}",
+                    "institution": f"投资机构{i+1}",
+                    "rating": ["买入", "持有", "卖出"][i % 3],
+                    "target_price": 12.0 + i * 0.5,
+                    "publish_time": date.isoformat(),
+                    "summary": f"市场分析报告摘要{i+1}",
+                    "symbol": None
+                })
+        
+        # 分页处理
+        total = len(reports)
+        start = (page - 1) * page_size
+        end = start + page_size
+        paginated_reports = reports[start:end]
+        
+        return jsonify({
+            "success": True,
+            "data": {
+                "reports": paginated_reports,
+                "total": total,
+                "page": page,
+                "page_size": page_size,
+                "total_pages": (total + page_size - 1) // page_size
+            }
+        })
+        
+    except ValueError as e:
+        return jsonify({
+            "success": False,
+            "error": f"参数错误: {str(e)}"
+        }), 400
+    except Exception as e:
+        logger.error(f"获取分析报告失败: {str(e)}")
+        return jsonify({
+            "success": False,
+            "error": "获取分析报告失败"
+        }), 500
+
 @data_bp.route('/health', methods=['GET'])
 def health_check():
     """数据服务健康检查"""
