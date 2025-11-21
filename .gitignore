@@ -1,3 +1,6 @@
+.spec-workflow
+.trae
+
 # Python
 __pycache__/
 *.py[cod]
