@@ -56,6 +56,10 @@ single_model_test_results.json
 *.swp
 *.swo
 
+# PID files (runtime generated)
+*.pid
+.pids/
+
 # Database
 *.db
 *.sqlite
