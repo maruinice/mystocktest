@@ -13,15 +13,16 @@ import uuid
 from app.middleware.auth import require_auth
 from app.docs.swagger_config import get_swagger_spec
 
-from app.services.trade_service import TradeService
+# 使用基于数据库的交易服务
+from app.services.trade_service_db import db_trade_service
 from app.models.trade import Order, Position, OrderType, OrderStatus, OrderSide
 
 
 # 创建交易蓝图
 trade_bp = Blueprint('trade', __name__, url_prefix='/api/trade')
 
-# 初始化交易服务
-trade_service = TradeService()
+# 使用数据库交易服务
+trade_service = db_trade_service
 
 
 class TradeValidator:
@@ -58,12 +59,33 @@ def place_order():
                 'message': '请求数据不能为空'
             }), 400
         
+        # 验证交易时间
+        from app.services.data_service import DataService
+        is_trading, time_msg = DataService.is_trading_time()
+        if not is_trading:
+            return jsonify({
+                'success': False,
+                'message': f'当前不可交易：{time_msg}',
+                'error_code': 'MARKET_CLOSED'
+            }), 400
+        
+        # 字段名映射（兼容前端）
+        # 前端使用: stock_code, direction, order_type, price, quantity
+        # 后端使用: symbol, side, order_type, price, quantity
+        if 'stock_code' in data:
+            data['symbol'] = data.pop('stock_code')
+        if 'direction' in data:
+            data['side'] = data.pop('direction')
+        
         # 验证数据
         validated_data = TradeValidator.validate_order_data(data)
         
+        # 确保user_id是字符串类型
+        user_id = str(g.current_user.get('id') or g.current_user.get('user_id', '1'))
+        
         # 下单
         order = trade_service.place_order(
-            user_id=g.current_user['id'],
+            user_id=user_id,
             symbol=validated_data['symbol'],
             side=validated_data['side'],
             order_type=validated_data['order_type'],
@@ -94,8 +116,11 @@ def place_order():
 def cancel_order(order_id: str):
     """撤单"""
     try:
+        # 确保user_id是字符串类型
+        user_id = str(g.current_user.get('id') or g.current_user.get('user_id', '1'))
+        
         result = trade_service.cancel_order(
-            user_id=g.current_user['id'],
+            user_id=user_id,
             order_id=order_id
         )
         
@@ -129,9 +154,12 @@ def get_orders():
         page = int(request.args.get('page', 1))
         page_size = min(int(request.args.get('page_size', 20)), 100)
         
+        # 确保user_id是字符串类型
+        user_id = str(g.current_user.get('id') or g.current_user.get('user_id', '1'))
+        
         # 获取订单列表 - 修复返回值处理
         orders, total = trade_service.get_orders(
-            user_id=g.current_user['id'],
+            user_id=user_id,
             status=status,
             code=symbol,  # 注意参数名映射
             page=page,
@@ -141,19 +169,8 @@ def get_orders():
         # 转换为字典格式
         orders_data = []
         for order in orders:
-            orders_data.append({
-                'order_id': order.order_id,
-                'symbol': order.code,
-                'side': order.side.value,
-                'order_type': order.order_type.value,
-                'quantity': order.quantity,
-                'price': order.price,
-                'filled_quantity': order.filled_quantity,
-                'avg_price': order.avg_price,
-                'status': order.status.value,
-                'created_at': order.created_at.isoformat(),
-                'updated_at': order.updated_at.isoformat() if order.updated_at else None
-            })
+            # 数据库模型直接调用to_dict()
+            orders_data.append(order.to_dict())
         
         result = {
             'orders': orders_data,
@@ -183,28 +200,20 @@ def get_positions():
     try:
         symbol = request.args.get('symbol')
         
+        # 确保user_id是字符串类型
+        user_id = str(g.current_user.get('id') or g.current_user.get('user_id', '1'))
+        
         # 获取持仓列表
         positions = trade_service.get_positions(
-            user_id=g.current_user['id'],
+            user_id=user_id,
             code=symbol  # 注意参数名映射
         )
         
         # 转换为字典格式
         positions_data = []
         for position in positions:
-            positions_data.append({
-                'symbol': position.code,
-                'quantity': position.quantity,
-                'avg_cost': position.avg_cost,
-                'last_price': position.last_price,
-                'market_value': position.market_value,
-                'profit_loss': position.profit_loss,
-                'profit_loss_pct': position.profit_loss_pct,
-                'available_quantity': position.available_quantity,
-                'frozen_quantity': position.frozen_quantity,
-                'created_at': position.created_at.isoformat(),
-                'updated_at': position.updated_at.isoformat() if position.updated_at else None
-            })
+            # 数据库模型直接调用to_dict()
+            positions_data.append(position.to_dict())
         
         return jsonify({
             'success': True,
@@ -289,9 +298,10 @@ def trade_health_check():
 def get_account_info():
     """获取账户信息"""
     try:
-        account_info = trade_service.get_account_info(
-            user_id=g.current_user['id']
-        )
+        # 确保user_id是字符串类型
+        user_id = str(g.current_user.get('id') or g.current_user.get('user_id', '1'))
+        
+        account_info = trade_service.get_account_info(user_id=user_id)
         
         return jsonify({
             'success': True,
@@ -300,59 +310,13 @@ def get_account_info():
         })
         
     except Exception as e:
+        import traceback
+        error_detail = traceback.format_exc()
+        print(f"获取账户信息失败: {error_detail}")
         return jsonify({
             'success': False,
             'message': f'获取账户信息失败: {str(e)}'
         }), 500
-
-
-@trade_bp.route('/trades', methods=['GET'])
-@require_auth
-def get_trades():
-    """获取成交记录"""
-    try:
-        # 获取查询参数
-        symbol = request.args.get('symbol')
-        start_date = request.args.get('start_date')
-        end_date = request.args.get('end_date')
-        page = int(request.args.get('page', 1))
-        page_size = min(int(request.args.get('page_size', 20)), 100)
-        
-        # 获取成交记录
-        result = trade_service.get_trades(
-            user_id=g.current_user['id'],
-            symbol=symbol,
-            start_date=start_date,
-            end_date=end_date,
-            page=page,
-            page_size=page_size
-        )
-        
-        return jsonify({
-            'success': True,
-            'message': '获取成交记录成功',
-            'data': result
-        })
-        
-    except Exception as e:
-        return jsonify({
-            'success': False,
-            'message': f'获取成交记录失败: {str(e)}'
-        }), 500
-
-
-@trade_bp.route('/health', methods=['GET'])
-def health_check():
-    """健康检查"""
-    return jsonify({
-        'success': True,
-        'message': '交易服务运行正常',
-        'data': {
-            'service': 'trade_api',
-            'status': 'healthy',
-            'timestamp': datetime.now().isoformat()
-        }
-    })
 
 
 

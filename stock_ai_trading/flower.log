@@ -1,0 +1,22 @@
+[I 251119 17:51:31 redis_client:39] Redis连接成功
+[I 251119 17:51:31 command:168] Visit me at http://0.0.0.0:5555
+[I 251119 17:51:31 command:176] Broker: redis://localhost:6379/1
+[I 251119 17:51:31 command:177] Registered tasks: 
+    ['app.tasks.data_sync_tasks.cleanup_old_data',
+     'app.tasks.data_sync_tasks.generate_data_quality_report',
+     'app.tasks.data_sync_tasks.sync_daily_quotes',
+     'app.tasks.data_sync_tasks.sync_financial_data',
+     'app.tasks.data_sync_tasks.sync_incremental_data',
+     'app.tasks.data_sync_tasks.sync_stock_basic_data',
+     'celery.accumulate',
+     'celery.backend_cleanup',
+     'celery.chain',
+     'celery.chord',
+     'celery.chord_unlock',
+     'celery.chunks',
+     'celery.group',
+     'celery.map',
+     'celery.starmap']
+[I 251119 17:51:31 mixins:228] Connected to redis://localhost:6379/1
+[E 251120 09:23:20 events:191] Failed to capture events: 'Connection closed by server.', trying again in 1 seconds.
+[I 251120 09:23:21 command:28] 15 detected, shutting down

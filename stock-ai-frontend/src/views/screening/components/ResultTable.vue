@@ -165,11 +165,14 @@
         </template>
       </el-table-column>
       
-      <el-table-column label="操作" width="120" align="center" fixed="right">
+      <el-table-column label="操作" width="200" align="center" fixed="right">
         <template #default="{ row }">
           <el-button-group>
             <el-button type="primary" size="small" @click.stop="viewStockDetail(row)">
               详情
+            </el-button>
+            <el-button type="warning" size="small" @click.stop="generateAIDecision(row)">
+              AI决策
             </el-button>
             <el-button type="success" size="small" @click.stop="addToPortfolio(row)">
               加入
@@ -213,6 +216,7 @@ const emit = defineEmits<{
   'row-click': [result: ScreeningResult]
   'view-detail': [result: ScreeningResult]
   'add-to-portfolio': [result: ScreeningResult]
+  'generate-ai-decision': [result: ScreeningResult]
 }>()
 
 // 方法
@@ -227,6 +231,10 @@ const viewStockDetail = (row: ScreeningResult) => {
 const addToPortfolio = (row: ScreeningResult) => {
   emit('add-to-portfolio', row)
   ElMessage.success(`已将 ${row.name} 加入投资组合`)
+}
+
+const generateAIDecision = (row: ScreeningResult) => {
+  emit('generate-ai-decision', row)
 }
 
 const getMarketTagType = (market: string) => {
@@ -281,12 +289,19 @@ const formatNumber = (value: number, decimals = 2) => {
 }
 
 const formatMarketCap = (value: number) => {
-  if (value >= 10000) {
-    return `${(value / 10000).toFixed(1)}万亿`
-  } else if (value >= 100) {
-    return `${(value / 100).toFixed(1)}百亿`
+  // value 单位是万元，需要转换为合适的显示单位
+  if (value >= 100000000) {
+    // >= 100亿万元 = 1万亿元
+    return `${(value / 100000000).toFixed(2)}万亿`
+  } else if (value >= 10000) {
+    // >= 10000万元 = 1亿元
+    return `${(value / 10000).toFixed(2)}亿`
+  } else if (value >= 1000) {
+    // >= 1000万元
+    return `${(value / 1000).toFixed(2)}千万`
   } else {
-    return `${value.toFixed(1)}亿`
+    // < 1000万元
+    return `${value.toFixed(2)}万`
   }
 }
 

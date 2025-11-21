@@ -657,7 +657,21 @@ const getSyncStatusText = (status: string) => {
 
 const formatDate = (date: string) => {
   if (!date) return '暂无数据'
-  return new Date(date).toLocaleDateString('zh-CN')
+  
+  // 处理YYYYMMDD格式 (例如: "20251111")
+  if (/^\d{8}$/.test(date)) {
+    const year = date.substring(0, 4)
+    const month = date.substring(4, 6)
+    const day = date.substring(6, 8)
+    return `${year}/${month}/${day}`
+  }
+  
+  // 处理其他日期格式
+  const parsedDate = new Date(date)
+  if (isNaN(parsedDate.getTime())) {
+    return date // 如果无法解析，返回原始值
+  }
+  return parsedDate.toLocaleDateString('zh-CN')
 }
 
 const formatDateTime = (dateTime: string) => {

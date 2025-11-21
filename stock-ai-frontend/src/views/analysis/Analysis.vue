@@ -384,7 +384,9 @@ use([
 // 响应式数据
 const loading = ref(false)
 const selectedSymbol = ref('000001.SZ')
-const dateRange = ref<[string, string]>(['2023-01-01', '2023-12-01'])
+// 默认显示最近一个月的数据
+import { getLastMonthRange } from '@/utils/date'
+const dateRange = ref<[string, string]>(getLastMonthRange())
 const chartPeriod = ref('1D')
 const selectedIndicator = ref('macd')
 const financialPeriod = ref('annual')
@@ -425,7 +427,7 @@ const klineChartOption = computed(() => ({
   },
   xAxis: {
     type: 'category',
-    data: klineData.value.length > 0 ? klineData.value.map((d:any)=>d.timestamp) : ['2023-11-27', '2023-11-28', '2023-11-29', '2023-11-30', '2023-12-01'],
+    data: klineData.value.length > 0 ? klineData.value.map((d:any)=>d.date) : ['2023-11-27', '2023-11-28', '2023-11-29', '2023-11-30', '2023-12-01'],
     scale: true,
     boundaryGap: false,
     axisLine: { onZero: false },
@@ -493,7 +495,7 @@ const klineChartOption = computed(() => ({
 }))
 
 const indicatorChartOption = computed(() => {
-  const x = klineData.value.map((d:any)=>d.timestamp)
+  const x = klineData.value.map((d:any)=>d.date)
   const closes = klineData.value.map((d:any)=>d.close)
   const highs = klineData.value.map((d:any)=>d.high)
   const lows = klineData.value.map((d:any)=>d.low)
@@ -556,7 +558,7 @@ const indicatorChartOption = computed(() => {
 const volumeChartOption = computed(() => ({
   tooltip: { trigger: 'axis' },
   grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
-  xAxis: { type: 'category', data: klineData.value.map((d:any)=>d.timestamp) },
+  xAxis: { type: 'category', data: klineData.value.map((d:any)=>d.date) },
   yAxis: { type: 'value', axisLabel: { formatter: (value: number) => formatLargeNumber(value) } },
   series: [{
     name: '成交量',

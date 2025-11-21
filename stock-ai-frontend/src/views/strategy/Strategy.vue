@@ -1085,6 +1085,8 @@ const editStrategyCode = (strategy: Strategy) => {
 // 生命周期
 onMounted(() => {
   refreshStrategies()
+  // 默认设置回测日期为最近一个月
+  applyQuickRange('1m')
 })
 </script>
 

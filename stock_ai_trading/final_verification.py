@@ -71,7 +71,7 @@ def verify_api():
     # 登录获取token
     login_data = {
         "email": "admin@example.com",
-        "password": "admin123"
+        "password": "admin123456"
     }
     
     login_response = requests.post(f"{base_url}/api/auth/login", json=login_data)

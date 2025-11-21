@@ -15,6 +15,8 @@ from .industry_classification_sync import IndustryClassificationSyncService
 from .daily_sync import DailySyncService
 from .daily_basic_sync import DailyBasicSyncService
 from .adj_factor_sync import AdjFactorSyncService
+from .suspend_sync import SuspendSyncService
+from .limit_price_sync import LimitPriceSyncService
 
 logger = logging.getLogger(__name__)
 
@@ -90,7 +92,7 @@ class SyncManager:
         },
         'suspend_info': {
             'name': '停复牌信息',
-            'service_class': None,  # 待实现
+            'service_class': SuspendSyncService,
             'description': '同步停复牌信息',
             'table': 'suspend_info',
             'frequency': '每日',
@@ -98,7 +100,7 @@ class SyncManager:
         },
         'limit_prices': {
             'name': '涨跌停价格',
-            'service_class': None,  # 待实现
+            'service_class': LimitPriceSyncService,
             'description': '同步涨跌停价格',
             'table': 'limit_prices',
             'frequency': '每日',

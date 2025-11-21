@@ -133,6 +133,61 @@ class TradeService:
             )
             self.orders[order.order_id] = order
     
+    def place_order(self, user_id: int, symbol: str, side: str, order_type: str,
+                   quantity: int, price: float = None) -> Dict[str, Any]:
+        """
+        下单（兼容API调用）
+        
+        Args:
+            user_id: 用户ID
+            symbol: 股票代码（如603387.SH）
+            side: 方向（buy/sell）
+            order_type: 订单类型（limit/market）
+            quantity: 数量
+            price: 价格（限价单必须）
+            
+        Returns:
+            订单信息字典
+        """
+        # 转换参数
+        user_id_str = str(user_id)
+        code = symbol.split('.')[0]  # 去掉后缀：603387.SH -> 603387
+        
+        # 转换枚举类型
+        side_enum = OrderSide.BUY if side.lower() == 'buy' else OrderSide.SELL
+        order_type_enum = OrderType.LIMIT if order_type.lower() == 'limit' else OrderType.MARKET
+        
+        # 调用创建订单
+        order = self.create_order(
+            user_id=user_id_str,
+            code=code,
+            side=side_enum,
+            order_type=order_type_enum,
+            quantity=quantity,
+            price=price if price else 0.0
+        )
+        
+        if not order:
+            raise ValueError("下单失败：资金不足或持仓不足")
+        
+        # 转换为字典返回
+        return {
+            'order_id': order.order_id,
+            'user_id': order.user_id,
+            'symbol': symbol,
+            'code': order.code,
+            'name': order.name,
+            'side': order.side.value,
+            'order_type': order.order_type.value,
+            'quantity': order.quantity,
+            'price': order.price,
+            'filled_quantity': order.filled_quantity,
+            'avg_price': order.avg_price,
+            'status': order.status.value,
+            'created_at': order.created_at.isoformat(),
+            'updated_at': order.updated_at.isoformat()
+        }
+    
     def create_order(self, user_id: str, code: str, side: OrderSide, order_type: OrderType,
                     quantity: int, price: float = 0.0, stop_price: float = 0.0,
                     time_in_force: str = 'day', notes: str = '') -> Optional[Order]:

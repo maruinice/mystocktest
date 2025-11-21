@@ -12,10 +12,8 @@ from .industry_classification_sync import IndustryClassificationSyncService
 from .daily_sync import DailySyncService
 from .daily_basic_sync import DailyBasicSyncService
 from .adj_factor_sync import AdjFactorSyncService
-
-# 待实现的服务
-# from .suspend_sync import SuspendSyncService
-# from .limit_price_sync import LimitPriceSyncService
+from .suspend_sync import SuspendSyncService
+from .limit_price_sync import LimitPriceSyncService
 
 __all__ = [
     'BaseSyncService',
@@ -27,7 +25,6 @@ __all__ = [
     'DailySyncService',
     'DailyBasicSyncService',
     'AdjFactorSyncService',
-    # 待实现
-    # 'SuspendSyncService',
-    # 'LimitPriceSyncService',
+    'SuspendSyncService',
+    'LimitPriceSyncService',
 ]

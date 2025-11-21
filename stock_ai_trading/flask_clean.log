@@ -1,0 +1,39 @@
+2025-11-19 21:37:56,730 - __main__ - INFO - Swagger documentation initialized at /apidocs/
+2025-11-19 21:37:56,822 - app.core.database - INFO - 数据库表创建成功
+2025-11-19 21:37:56,822 - __main__ - INFO - 数据库表创建成功
+2025-11-19 21:37:56,822 - __main__ - INFO - 启动Flask服务器在 0.0.0.0:5000
+2025-11-19 21:37:56,843 - werkzeug - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5000
+ * Running on http://192.168.126.128:5000
+2025-11-19 21:37:56,843 - werkzeug - INFO - [33mPress CTRL+C to quit[0m
+2025-11-19 21:37:56,844 - werkzeug - INFO -  * Restarting with stat
+2025-11-19 21:37:58,086 - __main__ - INFO - Swagger documentation initialized at /apidocs/
+2025-11-19 21:37:58,182 - app.core.database - INFO - 数据库表创建成功
+2025-11-19 21:37:58,182 - __main__ - INFO - 数据库表创建成功
+2025-11-19 21:37:58,183 - __main__ - INFO - 启动Flask服务器在 0.0.0.0:5000
+2025-11-19 21:37:58,205 - werkzeug - WARNING -  * Debugger is active!
+2025-11-19 21:37:58,205 - werkzeug - INFO -  * Debugger PIN: 142-954-176
+2025-11-19 21:38:11,293 - __main__ - ERROR - 认证中间件错误: AuthMiddleware.authenticate_request() takes 1 positional argument but 2 were given
+2025-11-19 21:38:11,308 - werkzeug - INFO - 127.0.0.1 - - [19/Nov/2025 21:38:11] "[31m[1mGET /api/data-management/data-sources?page=1&size=20&type=&status= HTTP/1.1[0m" 401 -
+2025-11-19 21:38:28,577 - __main__ - ERROR - 认证中间件错误: AuthMiddleware.authenticate_request() takes 1 positional argument but 2 were given
+2025-11-19 21:38:28,578 - werkzeug - INFO - 127.0.0.1 - - [19/Nov/2025 21:38:28] "[31m[1mGET /api/data-management/data-sources?page=1&size=20 HTTP/1.1[0m" 401 -
+2025-11-19 21:38:48,655 - werkzeug - INFO - 127.0.0.1 - - [19/Nov/2025 21:38:48] "POST /api/auth/login HTTP/1.1" 200 -
+2025-11-19 21:39:13,984 - werkzeug - INFO - 127.0.0.1 - - [19/Nov/2025 21:39:13] "POST /api/auth/login HTTP/1.1" 200 -
+2025-11-19 21:39:21,585 - werkzeug - INFO - 127.0.0.1 - - [19/Nov/2025 21:39:21] "POST /api/auth/login HTTP/1.1" 200 -
+2025-11-19 21:39:45,656 - werkzeug - INFO - 127.0.0.1 - - [19/Nov/2025 21:39:45] "POST /api/auth/login HTTP/1.1" 200 -
+2025-11-19 21:42:38,472 - werkzeug - INFO - 127.0.0.1 - - [19/Nov/2025 21:42:38] "POST /api/auth/login HTTP/1.1" 200 -
+2025-11-19 21:43:14,582 - werkzeug - INFO - 127.0.0.1 - - [19/Nov/2025 21:43:14] "POST /api/auth/login HTTP/1.1" 200 -
+2025-11-19 21:43:32,363 - __main__ - ERROR - 认证中间件错误: AuthMiddleware.authenticate_request() takes 1 positional argument but 2 were given
+2025-11-19 21:43:32,363 - werkzeug - INFO - 127.0.0.1 - - [19/Nov/2025 21:43:32] "[31m[1mPOST /api/data-management/data-sources/1/test HTTP/1.1[0m" 401 -
+2025-11-19 21:43:40,577 - werkzeug - INFO - 127.0.0.1 - - [19/Nov/2025 21:43:40] "POST /api/auth/login HTTP/1.1" 200 -
+2025-11-19 21:43:40,610 - __main__ - ERROR - 认证中间件错误: AuthMiddleware.authenticate_request() takes 1 positional argument but 2 were given
+2025-11-19 21:43:40,611 - werkzeug - INFO - 127.0.0.1 - - [19/Nov/2025 21:43:40] "[31m[1mPOST /api/data-management/data-sources/1/test HTTP/1.1[0m" 401 -
+2025-11-19 21:43:50,665 - __main__ - ERROR - 认证中间件错误: AuthMiddleware.authenticate_request() takes 1 positional argument but 2 were given
+2025-11-19 21:43:50,666 - werkzeug - INFO - 127.0.0.1 - - [19/Nov/2025 21:43:50] "[31m[1mGET /api/health HTTP/1.1[0m" 401 -
+/tmp/tmpscpmx2mk: 第 3 行： 68907 已杀死               python app/main_flask.py
+
+ERROR conda.cli.main_run:execute(127): `conda run python app/main_flask.py` failed. (See above for error)
+ * Serving Flask app 'main_flask'
+ * Debug mode: on
+

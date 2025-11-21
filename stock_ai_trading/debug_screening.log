@@ -82,3 +82,15 @@
 [DEBUG] 获取基础数据完成，行数: 500
 [DEBUG] _apply_screening_conditions 开始，输入数据行数: 500
 [DEBUG] 条件类型: <class 'dict'>, 条件内容: {'rsi': {'max': 70, 'min': 30}, 'volume_ratio': {'max': None, 'min': 1.5}, 'price_above_ma20': True}
+[DEBUG] _perform_screening 开始，custom_conditions: {}
+[DEBUG] 获取基础数据完成，行数: 500
+[DEBUG] _apply_screening_conditions 开始，输入数据行数: 500
+[DEBUG] 条件类型: <class 'dict'>, 条件内容: {'pb': {'max': 2, 'min': 0}, 'pe': {'max': 15, 'min': 0}, 'roe': {'max': None, 'min': 10}, 'dividend_yield': {'max': None, 'min': 3}}
+[DEBUG] _perform_screening 开始，custom_conditions: {}
+[DEBUG] 获取基础数据完成，行数: 500
+[DEBUG] _apply_screening_conditions 开始，输入数据行数: 500
+[DEBUG] 条件类型: <class 'dict'>, 条件内容: {'pb': {'max': 2, 'min': 0}, 'pe': {'max': 15, 'min': 0}, 'roe': {'max': None, 'min': 10}, 'dividend_yield': {'max': None, 'min': 3}}
+[DEBUG] _perform_screening 开始，custom_conditions: {}
+[DEBUG] 获取基础数据完成，行数: 500
+[DEBUG] _apply_screening_conditions 开始，输入数据行数: 500
+[DEBUG] 条件类型: <class 'dict'>, 条件内容: {'pe': {'max': 25, 'min': 0}, 'roe': {'max': 50, 'min': 10}}

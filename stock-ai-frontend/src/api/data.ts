@@ -108,5 +108,33 @@ export const dataApi = {
   // 获取关注列表
   getWatchlist(): Promise<{ data: StockInfo[] }> {
     return http.get('/data/watchlist')
+  },
+
+  // 获取K线数据
+  getStockQuotes(symbol: string, params?: {
+    period?: string
+    start_date?: string
+    end_date?: string
+    limit?: number
+  }): Promise<{
+    data: {
+      code: string
+      period: string
+      quotes: Array<{
+        date: string
+        open_price: number
+        high_price: number
+        low_price: number
+        close_price: number
+        volume: number
+        turnover: number
+        change_amount: number
+        change_percent: number
+        amplitude: number
+        turnover_rate: number
+      }>
+    }
+  }> {
+    return http.get(`/data/stocks/${symbol}/quotes`, { params })
   }
 }

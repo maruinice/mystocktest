@@ -35,6 +35,7 @@ class MockAIDecisionEngine:
     
     def make_single_decision(self, instruction: str, symbol: str, context: Dict = None):
         """单股票决策"""
+        import random
         decision_id = str(uuid.uuid4())
         decision = {
             'decision_id': decision_id,
@@ -43,6 +44,9 @@ class MockAIDecisionEngine:
             'action': 'buy',
             'quantity': 100,
             'confidence': 0.88,
+            'expected_return': round(random.uniform(0.05, 0.15), 4),  # 5%-15%的预期收益
+            'risk_score': random.randint(1, 5),  # 1-5的风险评分
+            'status': 'pending',  # 决策状态：pending, executed, cancelled
             'reasoning': f'对{symbol}的AI决策分析',
             'timestamp': datetime.now().isoformat()
         }
@@ -181,6 +185,40 @@ def multi_decision():
         return jsonify({
             'success': False,
             'message': f'批量AI决策失败: {str(e)}'
+        }), 500
+
+
+@ai_decision_bp.route('/generate', methods=['POST'])
+@require_auth
+def generate_decision():
+    """生成新的AI决策"""
+    try:
+        data = request.get_json() or {}
+        
+        # 获取参数
+        symbol = data.get('symbol', '000001.SZ')  # 默认使用平安银行
+        strategy_type = data.get('strategy_type', 'auto')
+        force_analysis = data.get('force_analysis', False)
+        
+        # 生成决策
+        instruction = f"分析{symbol}的投资机会，策略类型: {strategy_type}"
+        decision = ai_engine.make_single_decision(
+            instruction=instruction,
+            symbol=symbol,
+            context={'strategy_type': strategy_type, 'force_analysis': force_analysis}
+        )
+        
+        return jsonify({
+            'success': True,
+            'message': 'AI决策生成成功',
+            'data': decision
+        })
+        
+    except Exception as e:
+        logger.error(f"AI决策生成失败: {e}")
+        return jsonify({
+            'success': False,
+            'message': f'AI决策生成失败: {str(e)}'
         }), 500
 
 

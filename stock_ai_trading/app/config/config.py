@@ -17,11 +17,13 @@ class Config:
     
     # JWT配置
     JWT_SECRET_KEY = os.environ.get('JWT_SECRET_KEY') or 'jwt-secret-key-change-in-production'
-    JWT_ACCESS_TOKEN_EXPIRES = timedelta(hours=1)
+    JWT_ACCESS_TOKEN_EXPIRES = timedelta(hours=24)
     JWT_REFRESH_TOKEN_EXPIRES = timedelta(days=30)
     JWT_ALGORITHM = 'HS256'
     JWT_BLACKLIST_ENABLED = True
     JWT_BLACKLIST_TOKEN_CHECKS = ['access', 'refresh']
+    # Token自动续期配置（剩余时间少于此值时自动续期）
+    JWT_AUTO_REFRESH_THRESHOLD = timedelta(hours=6)  # 剩余6小时时自动续期
     
     # 数据库配置
     DATABASE_URL = os.environ.get('DATABASE_URL') or 'sqlite:///stock_trading.db'

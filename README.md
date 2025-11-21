@@ -52,6 +52,216 @@
 - 启动开发服务器：`npm run dev`
 - 访问地址：`http://localhost:5173`
 
+## 快速启动（Linux/Ubuntu）
+
+### 1. 系统准备
+
+确保系统已安装以下软件：
+- `conda`（Miniconda 或 Anaconda）
+- `Docker` 和 `docker-compose`
+- `MySQL` 客户端工具（可选，用于调试）
+
+```bash
+# 安装 Docker Compose（如果尚未安装）
+sudo apt install docker-compose
+
+# 确认安装
+docker --version
+docker-compose --version
+```
+
+### 2. 启动后端与 WebSocket
+
+#### 步骤1：创建 Conda 环境并安装依赖
+
+```bash
+# 进入后端目录
+cd /path/to/xl_ai_stock_trading/stock_ai_trading
+
+# 创建 conda 环境
+conda create -n stock_trading python=3.10 -y
+
+# 激活环境
+conda activate stock_trading
+
+# 安装 Python 依赖
+pip install -r requirements.txt
+
+# 安装额外必需的包
+pip install PyJWT psutil flask-jwt-extended flask-sqlalchemy flask-migrate
+```
+
+#### 步骤2：配置环境变量
+
+```bash
+# 复制环境变量示例
+cp .env.example .env
+
+# 编辑 .env 文件，至少配置以下项：
+# - DATABASE_URL=mysql+pymysql://root:YOUR_PASSWORD@localhost:3306/stock_trading
+# - REDIS_URL=redis://localhost:6379/0
+# - SECRET_KEY（设置强密码）
+# - JWT_SECRET_KEY（设置强密码）
+# - DEEPSEEK_API_KEY（从 DeepSeek 平台获取）
+# - TUSHARE_TOKEN（从 Tushare 获取）
+```
+
+#### 步骤3：启动 MySQL 和 Redis
+
+```bash
+# 使用 Docker Compose 启动 MySQL 和 Redis
+docker-compose up -d mysql redis
+
+# 等待服务启动（约10秒）
+sleep 10
+
+# 验证服务状态
+docker-compose ps
+```
+
+#### 步骤4：创建测试用户
+
+```bash
+# 运行以下 Python 脚本创建测试用户
+python -c "
+import pymysql
+import hashlib
+import secrets
+
+# 连接数据库
+conn = pymysql.connect(host='localhost', user='root', password='YOUR_PASSWORD', database='stock_trading')
+cursor = conn.cursor()
+
+# 生成密码哈希
+password = 'admin123456'
+salt = secrets.token_hex(16)
+password_hash = hashlib.pbkdf2_hmac('sha256', password.encode(), salt.encode(), 100000)
+full_hash = salt + password_hash.hex()
+
+# 删除旧用户（如果存在）
+cursor.execute('DELETE FROM users WHERE email = \"admin@example.com\"')
+
+# 创建新用户
+cursor.execute('''
+    INSERT INTO users (username, email, password_hash, full_name, role, status)
+    VALUES (\"admin\", \"admin@example.com\", %s, \"Admin User\", \"admin\", \"active\")
+''', (full_hash,))
+
+conn.commit()
+conn.close()
+
+print('✓ 测试用户已创建: username=admin, email=admin@example.com, password=admin123')
+"
+```
+
+#### 步骤5：启动 Flask API 和 WebSocket 服务
+
+```bash
+# 使用后台方式启动 Flask API
+nohup python run_flask.py --host 0.0.0.0 --port 5000 > flask.log 2>&1 &
+echo "Flask API started, PID: $!"
+
+# 等待 Flask 启动
+sleep 3
+
+# 启动 WebSocket 服务
+nohup python start_websocket.py > websocket.log 2>&1 &
+echo "WebSocket started, PID: $!"
+
+# 验证服务
+curl http://localhost:5000/
+echo "Backend services are running"
+```
+
+**提示**: 您也可以使用提供的便捷脚本 `start_backend_linux.sh`：
+
+```bash
+# 赋予执行权限
+chmod +x start_backend_linux.sh
+
+# 运行脚本
+./start_backend_linux.sh
+```
+
+#### 查看日志
+
+```bash
+# 查看 Flask API 日志
+tail -f flask.log
+
+# 查看 WebSocket 日志
+tail -f websocket.log
+
+# 查看 Docker 服务日志
+docker-compose logs -f mysql redis
+```
+
+### 3. 启动前端（Vue3 + Vite）
+
+```bash
+# 进入前端目录
+cd /path/to/xl_ai_stock_trading/stock-ai-frontend
+
+# 安装依赖
+npm install
+
+# 启动开发服务器（后台运行）
+nohup npm run dev > frontend.log 2>&1 &
+
+# 查看日志确认端口
+tail -n 20 frontend.log
+```
+
+**注意**: 前端可能在端口 `3000` 或 `5173` 上运行，请查看日志确认实际端口。
+
+访问地址：`http://localhost:3000` 或 `http://localhost:5173`
+
+### 4. 访问系统
+
+- **前端应用**: `http://localhost:3000` 或 `http://localhost:5173`
+- **API 文档**: `http://localhost:5000/apidocs/` 或 `http://localhost:5000/docs/`
+- **测试账号**: 
+  - 邮箱: `admin@example.com`
+  - 密码: `admin123`
+
+### 5. 停止服务
+
+```bash
+# 停止后端服务（记录启动时的 PID）
+kill PID_OF_FLASK PID_OF_WEBSOCKET
+
+# 或者查找并停止所有相关进程
+pkill -f run_flask.py
+pkill -f start_websocket.py
+
+# 停止前端服务
+pkill -f "npm run dev"
+
+# 停止 Docker 服务
+cd stock_ai_trading
+docker-compose down
+```
+
+### 常见问题
+
+1. **端口被占用**: 检查是否有其他服务占用 5000、8765、3000 端口
+   ```bash
+   sudo lsof -i :5000
+   sudo lsof -i :8765
+   sudo lsof -i :3000
+   ```
+
+2. **数据库连接失败**: 确认 MySQL 服务已启动且 `.env` 中的密码正确
+   ```bash
+   docker-compose ps
+   ```
+
+3. **前端无法连接后端**: 检查 `.env.development` 中的 API 地址是否正确
+
+4. **登录失败**: 确保已正确创建测试用户，密码哈希格式匹配
+
+详细问题和解决方案请参考：`issue/solution.md`
+
 ## 部署（Docker Compose，可选）
 
 - 进入后端目录：`cd stock_ai_trading`

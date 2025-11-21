@@ -66,10 +66,26 @@ class DailyBasicSyncService(BaseSyncService):
             self.update_progress(0, total_dates, f"开始同步 {total_dates} 个交易日的每日指标")
             
             # 按日期批量获取
-            for i, trade_date in enumerate(trade_dates, 1):
+            for i, trade_date_raw in enumerate(trade_dates, 1):
                 try:
-                    # 调用Tushare API
-                    df = self.pro.daily_basic(trade_date=trade_date)
+                    # 确保trade_date是字符串格式（YYYYMMDD）
+                    trade_date = trade_date_raw
+                    if not isinstance(trade_date, str):
+                        if hasattr(trade_date, 'strftime'):
+                            trade_date = trade_date.strftime('%Y%m%d')
+                        else:
+                            trade_date = str(trade_date).replace('-', '')
+                    elif '-' in trade_date:
+                        trade_date = trade_date.replace('-', '')
+                    
+                    # 验证日期格式
+                    if len(trade_date) != 8 or not trade_date.isdigit():
+                        logger.warning(f"日期格式不正确: {trade_date_raw} -> {trade_date}，跳过")
+                        continue
+                    
+                    logger.info(f"开始同步日期 {trade_date} ({i}/{total_dates})")
+                    # 调用Tushare API（确保传递字符串）
+                    df = self.pro.daily_basic(trade_date=str(trade_date))
                     
                     if not df.empty:
                         count = await self._save_daily_basic(df)
@@ -122,7 +138,20 @@ class DailyBasicSyncService(BaseSyncService):
                 ORDER BY cal_date
             """)
             result = db.execute(query, {'start_date': start_date, 'end_date': end_date}).fetchall()
-            return [row[0] for row in result]
+            trade_dates = []
+            for row in result:
+                date_val = row[0]
+                # 确保日期格式为YYYYMMDD字符串
+                if hasattr(date_val, 'strftime'):
+                    trade_dates.append(date_val.strftime('%Y%m%d'))
+                elif isinstance(date_val, str):
+                    date_str = date_val.replace('-', '') if '-' in date_val else date_val
+                    trade_dates.append(date_str)
+                else:
+                    date_str = str(date_val).replace('-', '')
+                    trade_dates.append(date_str)
+            logger.info(f"获取到 {len(trade_dates)} 个交易日")
+            return trade_dates
         except Exception as e:
             logger.error(f"获取交易日期失败: {e}")
             return []
@@ -133,8 +162,15 @@ class DailyBasicSyncService(BaseSyncService):
             db = next(get_db())
             count = 0
             
-            for _, row in df.iterrows():
+            for idx, row in df.iterrows():
                 try:
+                    # 确保trade_date格式正确
+                    trade_date = row.get('trade_date', '')
+                    if hasattr(trade_date, 'strftime'):
+                        trade_date = trade_date.strftime('%Y%m%d')
+                    elif isinstance(trade_date, str) and '-' in trade_date:
+                        trade_date = trade_date.replace('-', '')
+                    
                     insert_sql = text("""
                         INSERT INTO daily_basic 
                         (ts_code, trade_date, close, turnover_rate, turnover_rate_f, volume_ratio,
@@ -163,25 +199,31 @@ class DailyBasicSyncService(BaseSyncService):
                         updated_at = NOW()
                     """)
                     
+                    # 处理NaN值，转换为None
+                    def clean_value(val):
+                        if pd.isna(val) or val is None:
+                            return None
+                        return val
+                    
                     db.execute(insert_sql, {
-                        'ts_code': row['ts_code'],
-                        'trade_date': row['trade_date'],
-                        'close': row.get('close', None),
-                        'turnover_rate': row.get('turnover_rate', None),
-                        'turnover_rate_f': row.get('turnover_rate_f', None),
-                        'volume_ratio': row.get('volume_ratio', None),
-                        'pe': row.get('pe', None),
-                        'pe_ttm': row.get('pe_ttm', None),
-                        'pb': row.get('pb', None),
-                        'ps': row.get('ps', None),
-                        'ps_ttm': row.get('ps_ttm', None),
-                        'dv_ratio': row.get('dv_ratio', None),
-                        'dv_ttm': row.get('dv_ttm', None),
-                        'total_share': row.get('total_share', None),
-                        'float_share': row.get('float_share', None),
-                        'free_share': row.get('free_share', None),
-                        'total_mv': row.get('total_mv', None),
-                        'circ_mv': row.get('circ_mv', None)
+                        'ts_code': row.get('ts_code', ''),
+                        'trade_date': trade_date,
+                        'close': clean_value(row.get('close')),
+                        'turnover_rate': clean_value(row.get('turnover_rate')),
+                        'turnover_rate_f': clean_value(row.get('turnover_rate_f')),
+                        'volume_ratio': clean_value(row.get('volume_ratio')),
+                        'pe': clean_value(row.get('pe')),
+                        'pe_ttm': clean_value(row.get('pe_ttm')),
+                        'pb': clean_value(row.get('pb')),
+                        'ps': clean_value(row.get('ps')),
+                        'ps_ttm': clean_value(row.get('ps_ttm')),
+                        'dv_ratio': clean_value(row.get('dv_ratio')),
+                        'dv_ttm': clean_value(row.get('dv_ttm')),
+                        'total_share': clean_value(row.get('total_share')),
+                        'float_share': clean_value(row.get('float_share')),
+                        'free_share': clean_value(row.get('free_share')),
+                        'total_mv': clean_value(row.get('total_mv')),
+                        'circ_mv': clean_value(row.get('circ_mv'))
                     })
                     
                     count += 1

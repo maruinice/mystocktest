@@ -20,12 +20,27 @@ class DataValidator:
     
     @staticmethod
     def validate_stock_code(code: str) -> bool:
-        """验证股票代码格式"""
+        """验证股票代码格式（支持带后缀和不带后缀）"""
         if not code or len(code) < 6:
             return False
         
-        # 简单的股票代码格式验证
-        return code.isdigit() or (len(code) == 6 and code[:2] in ['00', '30', '60'])
+        # 支持格式：
+        # 1. 6位纯数字（如603387）
+        # 2. 带市场后缀（如603387.SH, 000001.SZ）
+        
+        # 去掉市场后缀
+        if '.' in code:
+            stock_num, market = code.split('.')
+            if market not in ['SH', 'SZ', 'BJ']:
+                return False
+            code = stock_num
+        
+        # 验证6位数字代码
+        if len(code) != 6 or not code.isdigit():
+            return False
+        
+        # 验证代码前缀（沪市60/68/90，深市00/30/20，北交所8/4）
+        return code[:2] in ['00', '30', '60', '68', '90', '20'] or code[0] in ['8', '4']
     
     @staticmethod
     def validate_date_range(start_date: str, end_date: str) -> tuple[bool, str]:
@@ -284,7 +299,8 @@ class MockDataService:
         }
 
 # 全局数据服务实例
-data_service = MockDataService()
+from app.services.data_service import DataService
+data_service = DataService()
 
 def require_auth(f):
     """认证装饰器（简化版）"""
@@ -414,13 +430,16 @@ def get_stock_quotes(code: str):
             "error": "获取股票行情失败"
         }), 500
 
+@data_bp.route('/stock/<code>', methods=['GET'])
 @data_bp.route('/stocks/<code>/info', methods=['GET'])
 @require_auth
 def get_stock_info(code: str):
-    """获取股票基本信息"""
+    """获取股票基本信息（支持两种路由）"""
     try:
-        # 验证股票代码
-        if not DataValidator.validate_stock_code(code):
+        # 验证股票代码（允许带后缀的代码如603387.SH）
+        # 移除.SH/.SZ后缀进行验证
+        base_code = code.split('.')[0]
+        if not base_code.isdigit() or len(base_code) != 6:
             return jsonify({
                 "success": False,
                 "error": "无效的股票代码"
@@ -836,6 +855,119 @@ def remove_from_watchlist(code: str):
         return jsonify({
             "success": False,
             "error": "移除关注失败"
+        }), 500
+
+@data_bp.route('/market/<string:symbol>', methods=['GET'])
+@require_auth
+def get_market_data(symbol: str):
+    """获取股票行情数据"""
+    try:
+        # 获取查询参数
+        period = request.args.get('period', '1D')
+        start_date = request.args.get('start_date')
+        end_date = request.args.get('end_date')
+        
+        # 验证股票代码
+        if not symbol:
+            return jsonify({
+                "success": False,
+                "error": "股票代码不能为空"
+            }), 400
+        
+        # 验证日期范围
+        if start_date and end_date:
+            is_valid, message = DataValidator.validate_date_range(start_date, end_date)
+            if not is_valid:
+                return jsonify({
+                    "success": False,
+                    "error": message
+                }), 400
+        
+        # 获取行情数据（返回StockQuote对象列表）
+        quotes = data_service.get_stock_quotes(
+            code=symbol,
+            start_date=start_date,
+            end_date=end_date,
+            limit=500
+        )
+        
+        if not quotes:
+            return jsonify({
+                "success": False,
+                "error": "未找到行情数据"
+            }), 404
+        
+        # 处理K线数据
+        kline_data = []
+        current_price = 0
+        for quote in quotes:
+            kline_data.append({
+                'date': quote.date.strftime('%Y-%m-%d') if hasattr(quote.date, 'strftime') else str(quote.date),
+                'open': quote.open_price,
+                'close': quote.close_price,
+                'high': quote.high_price,
+                'low': quote.low_price,
+                'volume': quote.volume
+            })
+            current_price = quote.close_price  # 最后一条是最新价格
+        
+        return jsonify({
+            "success": True,
+            "data": {
+                "symbol": symbol,
+                "current_price": current_price,
+                "kline_data": kline_data,
+                "period": period
+            }
+        })
+        
+    except ValueError as e:
+        return jsonify({
+            "success": False,
+            "error": f"参数错误: {str(e)}"
+        }), 400
+    except Exception as e:
+        logger.error(f"获取行情数据失败: {str(e)}")
+        return jsonify({
+            "success": False,
+            "error": "获取行情数据失败"
+        }), 500
+
+@data_bp.route('/financial/<string:symbol>', methods=['GET'])
+@require_auth
+def get_financial_data_api(symbol: str):
+    """获取股票财务数据（前端专用API）"""
+    try:
+        # 验证股票代码
+        if not symbol:
+            return jsonify({
+                "success": False,
+                "error": "股票代码不能为空"
+            }), 400
+        
+        # 获取查询参数
+        report_type = request.args.get('report_type', 'annual')
+        year = request.args.get('year')
+        limit = int(request.args.get('limit', 5))
+        
+        # 获取财务数据
+        financials = data_service.get_stock_financials(
+            code=symbol,
+            report_type=report_type,
+            year=year,
+            limit=limit
+        )
+        
+        return jsonify({
+            "success": True,
+            "data": financials
+        })
+        
+    except Exception as e:
+        logger.error(f"获取财务数据失败: {str(e)}")
+        return jsonify({
+            "success": False,
+            "error": "获取财务数据失败"
         }), 500
 
 @data_bp.route('/market/indicators', methods=['GET'])

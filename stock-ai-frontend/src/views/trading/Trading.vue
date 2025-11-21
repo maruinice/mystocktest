@@ -74,10 +74,18 @@
               </div>
             </el-col>
             <el-col :span="12">
-              <!-- K线图占位 -->
-              <div class="chart-placeholder">
-                <el-icon><TrendCharts /></el-icon>
-                <p>K线图</p>
+              <!-- K线图 -->
+              <div v-loading="klineLoading" class="kline-chart-container">
+                <v-chart 
+                  v-if="klineData.length > 0"
+                  :option="klineChartOption" 
+                  :autoresize="true"
+                  style="height: 200px;"
+                />
+                <div v-else class="chart-placeholder">
+                  <el-icon><TrendCharts /></el-icon>
+                  <p>暂无K线数据</p>
+                </div>
               </div>
             </el-col>
           </el-row>
@@ -239,6 +247,29 @@ import { dataApi } from '@/api/data'
 import { formatNumber, formatPercent, formatDateTime } from '@/utils/format'
 import type { StockInfo, StockSearch } from '@/types/data'
 import type { PlaceOrderRequest } from '@/types/trading'
+import { use } from 'echarts/core'
+import { CanvasRenderer } from 'echarts/renderers'
+import { CandlestickChart, LineChart } from 'echarts/charts'
+import {
+  TitleComponent,
+  TooltipComponent,
+  GridComponent,
+  DataZoomComponent,
+  LegendComponent
+} from 'echarts/components'
+import VChart from 'vue-echarts'
+
+// 注册ECharts组件
+use([
+  CanvasRenderer,
+  CandlestickChart,
+  LineChart,
+  TitleComponent,
+  TooltipComponent,
+  GridComponent,
+  DataZoomComponent,
+  LegendComponent
+])
 
 const tradingStore = useTradingStore()
 
@@ -248,7 +279,9 @@ const searchResults = ref<StockSearch[]>([])
 const selectedStock = ref<StockInfo | null>(null)
 const orderLoading = ref(false)
 const ordersLoading = ref(false)
+const klineLoading = ref(false)
 const orderFormRef = ref<FormInstance>()
+const klineData = ref<any[]>([])
 
 // 订单表单
 const orderForm = reactive<PlaceOrderRequest>({
@@ -297,6 +330,118 @@ const canPlaceOrder = computed(() => {
          (orderForm.side === 'sell' || estimatedAmount.value <= availableCash.value)
 })
 
+// K线图配置
+const klineChartOption = computed(() => {
+  if (klineData.value.length === 0) {
+    return {}
+  }
+
+  // 准备数据
+  const dates = klineData.value.map((item: any) => {
+    const date = new Date(item.date)
+    return `${date.getMonth() + 1}/${date.getDate()}`
+  })
+  
+  const candlestickData = klineData.value.map((item: any) => [
+    item.open_price,
+    item.close_price,
+    item.low_price,
+    item.high_price
+  ])
+
+  // 计算MA5
+  const ma5Data: number[] = []
+  for (let i = 0; i < klineData.value.length; i++) {
+    if (i < 4) {
+      ma5Data.push(NaN)
+    } else {
+      let sum = 0
+      for (let j = 0; j < 5; j++) {
+        sum += klineData.value[i - j].close_price
+      }
+      ma5Data.push(sum / 5)
+    }
+  }
+
+  return {
+    tooltip: {
+      trigger: 'axis',
+      axisPointer: {
+        type: 'cross'
+      },
+      formatter: (params: any) => {
+        const dataIndex = params[0].dataIndex
+        const item = klineData.value[dataIndex]
+        return `
+          日期: ${dates[dataIndex]}<br/>
+          开盘: ${item.open_price.toFixed(2)}<br/>
+          收盘: ${item.close_price.toFixed(2)}<br/>
+          最高: ${item.high_price.toFixed(2)}<br/>
+          最低: ${item.low_price.toFixed(2)}<br/>
+          涨跌幅: ${(item.change_percent * 100).toFixed(2)}%
+        `
+      }
+    },
+    grid: {
+      left: '5%',
+      right: '5%',
+      bottom: '15%',
+      top: '10%'
+    },
+    xAxis: {
+      type: 'category',
+      data: dates,
+      scale: true,
+      boundaryGap: true,
+      axisLine: { onZero: false },
+      splitLine: { show: false },
+      axisLabel: {
+        fontSize: 10
+      }
+    },
+    yAxis: {
+      scale: true,
+      splitArea: {
+        show: true
+      },
+      axisLabel: {
+        fontSize: 10
+      }
+    },
+    dataZoom: [
+      {
+        type: 'inside',
+        start: 50,
+        end: 100
+      }
+    ],
+    series: [
+      {
+        name: 'K线',
+        type: 'candlestick',
+        data: candlestickData,
+        itemStyle: {
+          color: '#ef232a',
+          color0: '#14b143',
+          borderColor: '#ef232a',
+          borderColor0: '#14b143'
+        }
+      },
+      {
+        name: 'MA5',
+        type: 'line',
+        data: ma5Data,
+        smooth: true,
+        lineStyle: {
+          opacity: 0.7,
+          width: 1
+        },
+        showSymbol: false
+      }
+    ]
+  }
+})
+
 // 方法
 const handleSearch = async () => {
   if (!searchKeyword.value.trim()) {
@@ -324,8 +469,26 @@ const selectStock = async (stock: StockSearch) => {
     if (orderForm.order_type === 'limit' && selectedStock.value.current_price) {
       orderForm.price = selectedStock.value.current_price
     }
+    
+    // 加载K线数据
+    await loadKlineData(stock.symbol)
   } catch (error) {
     ElMessage.error('获取股票信息失败')
+  }
+}
+
+const loadKlineData = async (symbol: string) => {
+  klineLoading.value = true
+  try {
+    const response = await dataApi.getStockQuotes(symbol, {
+      limit: 30  // 获取最近30天的数据
+    })
+    klineData.value = response.data.quotes || []
+  } catch (error) {
+    console.error('加载K线数据失败:', error)
+    klineData.value = []
+  } finally {
+    klineLoading.value = false
   }
 }
 
@@ -468,6 +631,12 @@ onMounted(() => {
       margin-right: 12px;
     }
   }
+}
+
+.kline-chart-container {
+  height: 200px;
+  border-radius: 4px;
+  overflow: hidden;
 }
 
 .chart-placeholder {

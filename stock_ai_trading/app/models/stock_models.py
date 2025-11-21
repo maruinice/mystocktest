@@ -163,8 +163,8 @@ class TradingStrategies(Base):
     created_at = Column(DateTime, default=func.now(), comment='创建时间')
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now(), comment='更新时间')
     
-    # 关系
-    creator = relationship("Users", back_populates="strategies")
+    # 关系（单向）
+    # creator = relationship("Users")  # 暂时注释掉，避免循环依赖
     
     # 索引
     __table_args__ = (
@@ -191,10 +191,10 @@ class Portfolios(Base):
     created_at = Column(DateTime, default=func.now(), comment='创建时间')
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now(), comment='更新时间')
     
-    # 关系
-    user = relationship("Users", back_populates="portfolios")
-    strategy = relationship("TradingStrategies")
-    trades = relationship("TradeRecords", back_populates="portfolio")
+    # 关系（单向，避免循环依赖）
+    # user = relationship("Users")
+    # strategy = relationship("TradingStrategies")
+    # trades = relationship("TradeRecords")
     
     # 索引
     __table_args__ = (
@@ -226,8 +226,8 @@ class TradeRecords(Base):
     remark = Column(Text, comment='备注')
     created_at = Column(DateTime, default=func.now(), comment='创建时间')
     
-    # 关系
-    portfolio = relationship("Portfolios", back_populates="trades")
+    # 关系（单向，避免循环依赖）
+    # portfolio = relationship("Portfolios")
     
     # 索引
     __table_args__ = (
@@ -254,8 +254,8 @@ class RiskRules(Base):
     created_at = Column(DateTime, default=func.now(), comment='创建时间')
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now(), comment='更新时间')
     
-    # 关系
-    creator = relationship("Users")
+    # 关系（避免循环依赖）
+    # creator = relationship("Users")
     
     # 索引
     __table_args__ = (
@@ -337,8 +337,9 @@ class Users(Base):
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now(), comment='更新时间')
     
     # 关系
-    portfolios = relationship("Portfolios", back_populates="user")
-    strategies = relationship("TradingStrategies", back_populates="creator")
+    # 关系（单向，避免循环依赖）
+    # portfolios = relationship("Portfolios")
+    # strategies = relationship("TradingStrategies")
     
     # 索引
     __table_args__ = (

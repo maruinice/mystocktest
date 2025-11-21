@@ -314,8 +314,8 @@ const riskMetrics = computed(() => [
   { label: '波动率', value: `${(props.result.volatility * 100).toFixed(2)}%`, class: '' },
   { label: '胜率', value: `${(props.result.win_rate * 100).toFixed(1)}%`, class: props.result.win_rate > 0.5 ? 'positive' : '' },
   { label: '总交易次数', value: props.result.total_trades.toString(), class: '' },
-  { label: '平均盈利', value: `${(props.result.avg_win * 100).toFixed(2)}%`, class: 'positive' },
-  { label: '平均亏损', value: `${(props.result.avg_loss * 100).toFixed(2)}%`, class: 'negative' }
+  { label: '平均盈利', value: `¥${props.result.avg_win.toFixed(2)}`, class: 'positive' },
+  { label: '平均亏损', value: `¥${Math.abs(props.result.avg_loss).toFixed(2)}`, class: 'negative' }
 ])
 
 const filteredTrades = computed(() => {

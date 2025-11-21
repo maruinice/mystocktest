@@ -90,6 +90,73 @@ class TushareService:
         redis_client.redis_client.expire(calls_key, 60)
         redis_client.redis_client.expire(points_key, 60)
     
+    def test_connection(self) -> Dict[str, Any]:
+        """
+        测试Tushare连接
+        Returns:
+            Dict: 包含测试结果的字典
+                - success (bool): 测试是否成功
+                - message (str): 测试消息
+                - data (dict, optional): 测试返回的数据
+        """
+        try:
+            # 检查token是否配置
+            if not self.token:
+                return {
+                    'success': False,
+                    'message': 'Tushare Token未配置，请在环境变量中设置TUSHARE_TOKEN'
+                }
+            
+            # 检查API对象是否初始化
+            if not self.pro:
+                return {
+                    'success': False,
+                    'message': 'Tushare API未初始化'
+                }
+            
+            # 尝试调用一个简单的API来测试连接
+            # 使用trade_cal接口，只获取1条记录，消耗积分少
+            df = self.pro.trade_cal(exchange='SSE', start_date='20240101', end_date='20240102')
+            
+            if df is not None and not df.empty:
+                return {
+                    'success': True,
+                    'message': 'Tushare连接测试成功',
+                    'data': {
+                        'token_valid': True,
+                        'api_accessible': True,
+                        'test_records': len(df),
+                        'test_time': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                    }
+                }
+            else:
+                return {
+                    'success': False,
+                    'message': 'Tushare连接测试失败：未返回数据'
+                }
+                
+        except Exception as e:
+            error_message = str(e)
+            logger.error(f"Tushare连接测试失败: {error_message}")
+            
+            # 分析错误类型给出更友好的提示
+            if 'permission denied' in error_message.lower() or 'not authorized' in error_message.lower():
+                message = 'Token无效或权限不足，请检查Tushare Token是否正确'
+            elif 'network' in error_message.lower() or 'connection' in error_message.lower():
+                message = '网络连接失败，请检查网络连接'
+            elif 'timeout' in error_message.lower():
+                message = '连接超时，请稍后重试'
+            else:
+                message = f'连接测试失败：{error_message}'
+            
+            return {
+                'success': False,
+                'message': message,
+                'data': {
+                    'error': error_message
+                }
+            }
+    
     @retry_with_backoff(max_retries=3, backoff_factor=2)
     async def _api_call(self, api_name: str, **kwargs) -> pd.DataFrame:
         """统一的API调用方法"""

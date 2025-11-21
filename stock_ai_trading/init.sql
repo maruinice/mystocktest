@@ -52,7 +52,7 @@ CREATE TABLE stock_basic (
 
 -- 3. 行情数据(stock_quotes) - 按日期分区
 CREATE TABLE stock_quotes (
-    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    id         BIGINT AUTO_INCREMENT,
     stock_code VARCHAR(10) NOT NULL COMMENT '股票代码',
     trade_date DATE NOT NULL COMMENT '交易日期',
     open_price DECIMAL(10,3) NOT NULL COMMENT '开盘价',
@@ -69,9 +69,8 @@ CREATE TABLE stock_quotes (
     pb_ratio DECIMAL(10,4) COMMENT '市净率',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     
-    UNIQUE KEY uk_stock_date (stock_code, trade_date),
-    INDEX idx_stock_code (stock_code),
-    INDEX idx_trade_date (trade_date),
+    PRIMARY KEY (id, stock_code, trade_date),   -- 包含分区列 
+
     INDEX idx_close_price (close_price),
     INDEX idx_volume (volume),
     INDEX idx_change_pct (change_pct)
@@ -87,10 +86,10 @@ PARTITION BY RANGE (YEAR(trade_date)) (
 
 -- 4. 财务数据(financial_data) - 按年度分区
 CREATE TABLE financial_data (
-    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    id BIGINT AUTO_INCREMENT,
     stock_code VARCHAR(10) NOT NULL COMMENT '股票代码',
     report_date DATE NOT NULL COMMENT '报告期',
-    report_type ENUM('Q1', 'Q2', 'Q3', 'annual') NOT NULL COMMENT '报告类型',
+    report_type ENUM('Q1','Q2','Q3','annual') NOT NULL COMMENT '报告类型',
     revenue DECIMAL(20,2) COMMENT '营业收入',
     net_profit DECIMAL(20,2) COMMENT '净利润',
     total_assets DECIMAL(20,2) COMMENT '总资产',
@@ -107,14 +106,19 @@ CREATE TABLE financial_data (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     
+    /* 主键同时包含分区列，且 AUTO_INCREMENT 列在最左 */
+    PRIMARY KEY (id, report_date),
+    
+    /* 业务唯一性约束 */
     UNIQUE KEY uk_stock_report (stock_code, report_date, report_type),
+    
+    /* 常用查询索引 */
     INDEX idx_stock_code (stock_code),
     INDEX idx_report_date (report_date),
     INDEX idx_report_type (report_type),
     INDEX idx_roe (roe),
-    INDEX idx_eps (eps),
-    FOREIGN KEY (stock_code) REFERENCES stock_basic(stock_code) ON DELETE CASCADE
-) ENGINE=InnoDB COMMENT='财务数据表'
+    INDEX idx_eps (eps)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='财务数据表'
 PARTITION BY RANGE (YEAR(report_date)) (
     PARTITION p2020 VALUES LESS THAN (2021),
     PARTITION p2021 VALUES LESS THAN (2022),
@@ -174,12 +178,12 @@ CREATE TABLE portfolios (
 
 -- 7. 交易记录(trade_records) - 按月分区
 CREATE TABLE trade_records (
-    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    id BIGINT AUTO_INCREMENT,
     user_id BIGINT NOT NULL COMMENT '用户ID',
     strategy_id BIGINT COMMENT '策略ID',
     stock_code VARCHAR(10) NOT NULL COMMENT '股票代码',
-    trade_type ENUM('buy', 'sell') NOT NULL COMMENT '交易类型',
-    order_type ENUM('market', 'limit', 'stop') DEFAULT 'market' COMMENT '订单类型',
+    trade_type ENUM('buy','sell') NOT NULL COMMENT '交易类型',
+    order_type ENUM('market','limit','stop') DEFAULT 'market' COMMENT '订单类型',
     quantity BIGINT NOT NULL COMMENT '交易数量',
     price DECIMAL(10,3) NOT NULL COMMENT '交易价格',
     amount DECIMAL(15,2) NOT NULL COMMENT '交易金额',
@@ -187,24 +191,30 @@ CREATE TABLE trade_records (
     tax DECIMAL(10,2) DEFAULT 0.00 COMMENT '印花税',
     net_amount DECIMAL(15,2) NOT NULL COMMENT '净交易金额',
     trade_time TIMESTAMP NOT NULL COMMENT '交易时间',
-    status ENUM('pending', 'filled', 'cancelled', 'failed') DEFAULT 'pending' COMMENT '交易状态',
+    trade_date DATE AS (DATE(trade_time)) STORED COMMENT '分区用日期列',
+    status ENUM('pending','filled','cancelled','failed') DEFAULT 'pending' COMMENT '交易状态',
     order_id VARCHAR(50) COMMENT '订单号',
     reason TEXT COMMENT '交易原因/备注',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     
+    /* 主键必须包含分区列，且 AUTO_INCREMENT 列在最左 */
+    PRIMARY KEY (id, trade_date),
+    
+    /* 业务唯一性（可选） */
+    UNIQUE KEY uk_order_id (order_id, trade_date),
+    
+    /* 常用查询索引 */
     INDEX idx_user_id (user_id),
     INDEX idx_strategy_id (strategy_id),
     INDEX idx_stock_code (stock_code),
     INDEX idx_trade_type (trade_type),
-    INDEX idx_trade_time (trade_time),
     INDEX idx_status (status),
     INDEX idx_user_time (user_id, trade_time),
-    INDEX idx_stock_time (stock_code, trade_time),
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-    FOREIGN KEY (strategy_id) REFERENCES trading_strategies(id) ON DELETE SET NULL,
-    FOREIGN KEY (stock_code) REFERENCES stock_basic(stock_code) ON DELETE CASCADE
-) ENGINE=InnoDB COMMENT='交易记录表'
-PARTITION BY RANGE (YEAR(trade_time) * 100 + MONTH(trade_time)) (
+    INDEX idx_stock_time (stock_code, trade_time)
+) ENGINE=InnoDB
+  DEFAULT CHARSET=utf8mb4
+  COMMENT='交易记录表'
+PARTITION BY RANGE (YEAR(trade_date) * 100 + MONTH(trade_date)) (
     PARTITION p202401 VALUES LESS THAN (202402),
     PARTITION p202402 VALUES LESS THAN (202403),
     PARTITION p202403 VALUES LESS THAN (202404),
@@ -245,82 +255,90 @@ CREATE TABLE risk_rules (
 
 -- 9. LLM决策记录(llm_decisions) - 按日期分区
 CREATE TABLE llm_decisions (
-    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    id BIGINT AUTO_INCREMENT,
     user_id BIGINT NOT NULL COMMENT '用户ID',
     strategy_id BIGINT COMMENT '策略ID',
     stock_code VARCHAR(10) NOT NULL COMMENT '股票代码',
-    decision_type ENUM('buy', 'sell', 'hold', 'analysis') NOT NULL COMMENT '决策类型',
+    decision_type ENUM('buy','sell','hold','analysis') NOT NULL COMMENT '决策类型',
     prompt_text TEXT NOT NULL COMMENT '输入提示词',
     llm_response TEXT NOT NULL COMMENT 'LLM响应内容',
     confidence_score DECIMAL(5,4) COMMENT '置信度分数(0-1)',
     reasoning TEXT COMMENT '决策推理过程',
     market_data JSON COMMENT '决策时的市场数据',
     decision_result JSON COMMENT '决策结果详情',
-    execution_status ENUM('pending', 'executed', 'rejected', 'expired') DEFAULT 'pending' COMMENT '执行状态',
+    execution_status ENUM('pending','executed','rejected','expired') DEFAULT 'pending' COMMENT '执行状态',
     model_name VARCHAR(50) COMMENT '使用的模型名称',
     model_version VARCHAR(20) COMMENT '模型版本',
     processing_time_ms INT COMMENT '处理时间(毫秒)',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    /* 持久化、无时区的 DATE 列，专门用于分区 */
+    created_date DATE AS (DATE(created_at)) STORED,
     
+    PRIMARY KEY (id, created_date),          -- 包含分区列
     INDEX idx_user_id (user_id),
     INDEX idx_strategy_id (strategy_id),
     INDEX idx_stock_code (stock_code),
     INDEX idx_decision_type (decision_type),
     INDEX idx_execution_status (execution_status),
-    INDEX idx_created_at (created_at),
     INDEX idx_user_stock_time (user_id, stock_code, created_at),
-    INDEX idx_confidence_score (confidence_score),
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-    FOREIGN KEY (strategy_id) REFERENCES trading_strategies(id) ON DELETE SET NULL,
-    FOREIGN KEY (stock_code) REFERENCES stock_basic(stock_code) ON DELETE CASCADE
-) ENGINE=InnoDB COMMENT='LLM决策记录表'
-PARTITION BY RANGE (TO_DAYS(created_at)) (
-    PARTITION p20240101 VALUES LESS THAN (TO_DAYS('2024-02-01')),
-    PARTITION p20240201 VALUES LESS THAN (TO_DAYS('2024-03-01')),
-    PARTITION p20240301 VALUES LESS THAN (TO_DAYS('2024-04-01')),
-    PARTITION p20240401 VALUES LESS THAN (TO_DAYS('2024-05-01')),
-    PARTITION p20240501 VALUES LESS THAN (TO_DAYS('2024-06-01')),
-    PARTITION p20240601 VALUES LESS THAN (TO_DAYS('2024-07-01')),
-    PARTITION p20240701 VALUES LESS THAN (TO_DAYS('2024-08-01')),
-    PARTITION p20240801 VALUES LESS THAN (TO_DAYS('2024-09-01')),
-    PARTITION p20240901 VALUES LESS THAN (TO_DAYS('2024-10-01')),
-    PARTITION p20241001 VALUES LESS THAN (TO_DAYS('2024-11-01')),
-    PARTITION p20241101 VALUES LESS THAN (TO_DAYS('2024-12-01')),
-    PARTITION p20241201 VALUES LESS THAN (TO_DAYS('2025-01-01')),
+    INDEX idx_confidence_score (confidence_score)
+) ENGINE=InnoDB
+  DEFAULT CHARSET=utf8mb4
+  COMMENT='LLM决策记录表'
+PARTITION BY RANGE (YEAR(created_date) * 100 + MONTH(created_date)) (
+    PARTITION p202401 VALUES LESS THAN (202402),
+    PARTITION p202402 VALUES LESS THAN (202403),
+    PARTITION p202403 VALUES LESS THAN (202404),
+    PARTITION p202404 VALUES LESS THAN (202405),
+    PARTITION p202405 VALUES LESS THAN (202406),
+    PARTITION p202406 VALUES LESS THAN (202407),
+    PARTITION p202407 VALUES LESS THAN (202408),
+    PARTITION p202408 VALUES LESS THAN (202409),
+    PARTITION p202409 VALUES LESS THAN (202410),
+    PARTITION p202410 VALUES LESS THAN (202411),
+    PARTITION p202411 VALUES LESS THAN (202412),
+    PARTITION p202412 VALUES LESS THAN (202501),
     PARTITION p_future VALUES LESS THAN MAXVALUE
 );
 
 -- 10. 系统监控(system_metrics) - 按日期分区
 CREATE TABLE system_metrics (
-    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    id BIGINT AUTO_INCREMENT,
     metric_name VARCHAR(100) NOT NULL COMMENT '指标名称',
-    metric_type ENUM('performance', 'business', 'system', 'error') NOT NULL COMMENT '指标类型',
+    metric_type ENUM('performance','business','system','error') NOT NULL COMMENT '指标类型',
     metric_value DECIMAL(20,6) NOT NULL COMMENT '指标值',
     metric_unit VARCHAR(20) COMMENT '指标单位',
     tags JSON COMMENT '标签信息',
     description TEXT COMMENT '指标描述',
     recorded_at TIMESTAMP NOT NULL COMMENT '记录时间',
+    /* 持久化、无时区的 DATE 列，专门用于分区 */
+    recorded_date DATE AS (DATE(recorded_at)) STORED,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    
+    /* 主键必须包含分区列，且 AUTO_INCREMENT 列在最左 */
+    PRIMARY KEY (id, recorded_date),
     
     INDEX idx_metric_name (metric_name),
     INDEX idx_metric_type (metric_type),
     INDEX idx_recorded_at (recorded_at),
     INDEX idx_name_time (metric_name, recorded_at),
     INDEX idx_type_time (metric_type, recorded_at)
-) ENGINE=InnoDB COMMENT='系统监控指标表'
-PARTITION BY RANGE (TO_DAYS(recorded_at)) (
-    PARTITION p20240101 VALUES LESS THAN (TO_DAYS('2024-02-01')),
-    PARTITION p20240201 VALUES LESS THAN (TO_DAYS('2024-03-01')),
-    PARTITION p20240301 VALUES LESS THAN (TO_DAYS('2024-04-01')),
-    PARTITION p20240401 VALUES LESS THAN (TO_DAYS('2024-05-01')),
-    PARTITION p20240501 VALUES LESS THAN (TO_DAYS('2024-06-01')),
-    PARTITION p20240601 VALUES LESS THAN (TO_DAYS('2024-07-01')),
-    PARTITION p20240701 VALUES LESS THAN (TO_DAYS('2024-08-01')),
-    PARTITION p20240801 VALUES LESS THAN (TO_DAYS('2024-09-01')),
-    PARTITION p20240901 VALUES LESS THAN (TO_DAYS('2024-10-01')),
-    PARTITION p20241001 VALUES LESS THAN (TO_DAYS('2024-11-01')),
-    PARTITION p20241101 VALUES LESS THAN (TO_DAYS('2024-12-01')),
-    PARTITION p20241201 VALUES LESS THAN (TO_DAYS('2025-01-01')),
+) ENGINE=InnoDB
+  DEFAULT CHARSET=utf8mb4
+  COMMENT='系统监控指标表'
+PARTITION BY RANGE (YEAR(recorded_date) * 100 + MONTH(recorded_date)) (
+    PARTITION p202401 VALUES LESS THAN (202402),
+    PARTITION p202402 VALUES LESS THAN (202403),
+    PARTITION p202403 VALUES LESS THAN (202404),
+    PARTITION p202404 VALUES LESS THAN (202405),
+    PARTITION p202405 VALUES LESS THAN (202406),
+    PARTITION p202406 VALUES LESS THAN (202407),
+    PARTITION p202407 VALUES LESS THAN (202408),
+    PARTITION p202408 VALUES LESS THAN (202409),
+    PARTITION p202409 VALUES LESS THAN (202410),
+    PARTITION p202410 VALUES LESS THAN (202411),
+    PARTITION p202411 VALUES LESS THAN (202412),
+    PARTITION p202412 VALUES LESS THAN (202501),
     PARTITION p_future VALUES LESS THAN MAXVALUE
 );
 
@@ -354,7 +372,7 @@ FROM stock_basic sb
 LEFT JOIN stock_quotes sq ON sb.stock_code = sq.stock_code 
     AND sq.trade_date = (SELECT MAX(trade_date) FROM stock_quotes WHERE stock_code = sb.stock_code)
 LEFT JOIN trade_records tr ON sb.stock_code = tr.stock_code AND tr.status = 'filled'
-WHERE sb.list_status = 'L'
+WHERE sb.status = 'active'
 GROUP BY sb.stock_code, sb.stock_name, sq.close_price, sq.change_pct;
 
 -- 插入初始数据

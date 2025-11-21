@@ -122,6 +122,7 @@
             :results="screeningStore.results"
             :loading="screeningStore.loading.executing || screeningStore.loading.results"
             @row-click="onResultRowClick"
+            @generate-ai-decision="onGenerateAIDecision"
           />
         </el-card>
       </div>
@@ -176,6 +177,7 @@
 import { ref, onMounted, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { TrendCharts, Search } from '@element-plus/icons-vue'
+import { useRouter } from 'vue-router'
 import { useScreeningStore } from '@/stores/screening'
 import type { ScreeningResult, ConditionItem } from '@/types/screening'
 
@@ -192,6 +194,7 @@ import StockDetailDialog from './components/StockDetailDialog.vue'
 
 // 状态管理
 const screeningStore = useScreeningStore()
+const router = useRouter()
 
 // 响应式数据
 const selectedStrategyId = ref<number>()
@@ -250,6 +253,9 @@ const executeScreening = async () => {
     await screeningStore.executeScreening(selectedStrategyId.value)
     // 刷新历史记录
     await screeningStore.fetchHistory()
+    // 自动切换到选股历史标签页
+    activeTab.value = 'history'
+    ElMessage.success('选股执行完成，已切换到历史记录')
   } catch (error) {
     console.error('执行选股失败:', error)
   }
@@ -322,6 +328,15 @@ const saveToPortfolio = async () => {
 const onResultRowClick = (result: ScreeningResult) => {
   selectedStock.value = result
   showStockDetailDialog.value = true
+}
+
+const onGenerateAIDecision = (result: ScreeningResult) => {
+  // 跳转到AI决策页面，并传递股票代码
+  router.push({
+    path: '/admin/ai-decision',
+    query: { symbol: result.symbol || result.ts_code }
+  })
+  ElMessage.success(`正在为 ${result.name} 生成AI决策...`)
 }
 
 const onHistoryPageChange = (page: number) => {

@@ -225,6 +225,14 @@ def register_flask_middleware(flask_app):
                 'error': 'authentication_error',
                 'message': str(e)
             }), 401
+    
+    @flask_app.after_request
+    def after_request(response):
+        """请求后处理 - 添加续期token到响应头"""
+        # 如果有新token（自动续期生成的），添加到响应头
+        if hasattr(g, 'new_token') and g.new_token:
+            response.headers['X-New-Token'] = g.new_token
+        return response
 
 
 def register_flask_blueprints(flask_app):

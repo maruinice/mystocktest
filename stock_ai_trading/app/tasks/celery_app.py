@@ -9,7 +9,7 @@ celery_app = Celery(
     "stock_ai_trading",
     broker=settings.CELERY_BROKER_URL,
     backend=settings.CELERY_RESULT_BACKEND,
-    include=["app.tasks.trading_tasks", "app.tasks.data_tasks"]
+    include=["app.tasks.data_sync_tasks"]
 )
 
 # Configure Celery

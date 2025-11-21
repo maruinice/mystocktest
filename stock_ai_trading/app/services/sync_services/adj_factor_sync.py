@@ -147,9 +147,16 @@ class AdjFactorSyncService(BaseSyncService):
                         updated_at = NOW()
                     """)
                     
+                    # 确保trade_date格式正确
+                    trade_date = row.get('trade_date', '')
+                    if hasattr(trade_date, 'strftime'):
+                        trade_date = trade_date.strftime('%Y%m%d')
+                    elif isinstance(trade_date, str) and '-' in trade_date:
+                        trade_date = trade_date.replace('-', '')
+                    
                     db.execute(insert_sql, {
-                        'ts_code': row['ts_code'],
-                        'trade_date': row['trade_date'],
+                        'ts_code': row.get('ts_code', ''),
+                        'trade_date': trade_date,
                         'adj_factor': row.get('adj_factor', None)
                     })
                     
