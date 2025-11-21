@@ -177,6 +177,7 @@ const handleMenuSelect = (index: string) => {
 
 // 处理用户菜单命令
 const handleUserCommand = async (command: string) => {
+  const { ElMessage, ElMessageBox } = await import('element-plus')
   switch (command) {
     case 'profile':
       ElMessage.info('个人资料功能开发中')

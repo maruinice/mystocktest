@@ -13,12 +13,13 @@
     <!-- 预连接 -->
     <link rel="preconnect" href="//localhost:5000" crossorigin />
     
-    <!-- 关键资源预加载 -->
-    <link rel="preload" href="/src/main.ts" as="script" crossorigin />
-    <link rel="preload" href="/src/styles/index.scss" as="style" />
+    <!-- 关键资源预加载（仅在需要时启用） -->
+    <!-- 注意：Vite 开发模式下，这些预加载可能会产生警告，可以注释掉 -->
+    <!-- <link rel="preload" href="/src/main.ts" as="script" crossorigin /> -->
+    <!-- <link rel="preload" href="/src/styles/index.scss" as="style" /> -->
     
-    <!-- 字体预加载 -->
-    <link rel="preload" href="//at.alicdn.com/t/font_2305433_bu8s0ulpz6.woff2" as="font" type="font/woff2" crossorigin />
+    <!-- 字体预加载（仅在需要时启用） -->
+    <!-- <link rel="preload" href="//at.alicdn.com/t/font_2305433_bu8s0ulpz6.woff2" as="font" type="font/woff2" crossorigin /> -->
     
     <!-- 性能优化 -->
     <meta name="theme-color" content="#409eff" />

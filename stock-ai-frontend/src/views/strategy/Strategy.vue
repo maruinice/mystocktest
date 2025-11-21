@@ -11,11 +11,15 @@
           <p class="page-description">专业量化交易策略开发、回测与管理平台</p>
         </div>
         <div class="header-actions">
-          <el-button type="primary" @click="showStrategyBuilder = true" size="large">
+          <el-button 
+            type="primary" 
+            @click="handleCreateStrategy" 
+            size="large"
+          >
             <el-icon><Plus /></el-icon>
             创建策略
           </el-button>
-          <el-button @click="showAIGenerator = true" size="large">
+          <el-button @click="handleAIGenerateStrategy" size="large">
             <el-icon><ChatDotRound /></el-icon>
             AI生成策略
           </el-button>
@@ -336,6 +340,7 @@
       width="90%"
       :close-on-click-modal="false"
       class="strategy-builder-dialog"
+      destroy-on-close
     >
       <StrategyBuilder
         v-if="showStrategyBuilder"
@@ -1080,6 +1085,32 @@ const editStrategyCode = (strategy: Strategy) => {
   showCodeViewer.value = false
   editingStrategy.value = strategy
   showStrategyBuilder.value = true
+}
+
+// 创建策略处理
+const handleCreateStrategy = (event?: Event) => {
+  console.log('handleCreateStrategy called', event)
+  try {
+    if (event) {
+      event.preventDefault()
+      event.stopPropagation()
+    }
+    editingStrategy.value = null
+    showStrategyBuilder.value = true
+    console.log('showStrategyBuilder set to:', showStrategyBuilder.value)
+    // 使用 nextTick 确保对话框能正确显示
+    nextTick(() => {
+      console.log('Dialog should be visible now')
+    })
+  } catch (error) {
+    console.error('Error in handleCreateStrategy:', error)
+    ElMessage.error('打开策略构建器失败: ' + (error as Error).message)
+  }
+}
+
+// AI生成策略处理
+const handleAIGenerateStrategy = () => {
+  showAIGenerator.value = true
 }
 
 // 生命周期

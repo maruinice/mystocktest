@@ -101,6 +101,33 @@ export class WebSocketClient {
           this.setStatus(WebSocketStatus.DISCONNECTED)
           this.stopHeartbeat()
           
+          // 认证错误（4001, 4002, 4003）不应该重连
+          if (event.code === 4001 || event.code === 4002 || event.code === 4003) {
+            this.log('WebSocket认证失败，停止重连', event.reason)
+            // 检查token是否过期
+            const token = localStorage.getItem('token')
+            if (!token) {
+              this.log('Token不存在，停止重连')
+              return
+            }
+            // 尝试解析token检查是否过期
+            try {
+              const payload = JSON.parse(atob(token.split('.')[1]))
+              const exp = payload.exp * 1000 // 转换为毫秒
+              if (Date.now() >= exp) {
+                this.log('Token已过期，停止重连')
+                return
+              }
+            } catch (e) {
+              // token格式错误，停止重连
+              this.log('Token格式错误，停止重连')
+              return
+            }
+            // token有效但认证失败，可能是服务器问题，停止重连避免无限循环
+            this.log('Token有效但认证失败，停止重连以避免无限循环')
+            return
+          }
+          
           // 如果不是主动关闭，尝试重连
           if (event.code !== 1000) {
             this.handleReconnect()

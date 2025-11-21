@@ -1046,7 +1046,7 @@ def get_market_summary():
 @data_bp.route('/news', methods=['GET'])
 @require_auth
 def get_news():
-    """获取新闻（支持按股票代码筛选）"""
+    """获取新闻（支持按股票代码筛选，通过大模型获取）"""
     try:
         # 获取查询参数
         symbol = request.args.get('symbol')
@@ -1062,20 +1062,117 @@ def get_news():
                 "error": message
             }), 400
         
-        # 获取新闻数据（返回模拟数据）
-        news = []
-        for i in range(page_size):
-            date = datetime.now() - timedelta(days=i)
-            news.append({
-                "id": f"news_{i}",
-                "title": f"{symbol or '市场'}重要新闻{i+1}",
-                "summary": f"这是关于{symbol or '市场'}的新闻摘要{i+1}",
-                "content": f"这是关于{symbol or '市场'}的详细新闻内容{i+1}",
-                "source": "财经新闻网",
-                "publish_time": date.isoformat(),
-                "url": f"https://news.example.com/{i}",
-                "symbol": symbol
-            })
+        # 通过大模型获取新闻数据
+        try:
+            from app.services.llm_gateway import gateway, GatewayRequest
+            import asyncio
+            
+            # 构建提示词
+            prompt = f"""请生成关于{symbol or '股票市场'}的最新财经新闻，要求：
+1. 生成{page_size}条新闻
+2. 每条新闻包含：标题、摘要、内容、来源、发布时间
+3. 新闻内容要真实、专业、有参考价值
+4. 返回JSON格式，格式如下：
+{{
+  "news": [
+    {{
+      "id": "news_1",
+      "title": "新闻标题",
+      "summary": "新闻摘要",
+      "content": "新闻详细内容",
+      "source": "新闻来源",
+      "publish_time": "2025-01-20T10:00:00",
+      "url": "https://example.com/news/1",
+      "symbol": "{symbol or ''}"
+    }}
+  ]
+}}"""
+            
+            # 调用大模型
+            request_obj = GatewayRequest(
+                messages=[
+                    {"role": "system", "content": "你是一个专业的财经新闻生成助手，能够生成真实、专业的股票市场新闻。"},
+                    {"role": "user", "content": prompt}
+                ],
+                max_tokens=2000,
+                temperature=0.7
+            )
+            
+            # 同步调用（在Flask中）
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            try:
+                response = loop.run_until_complete(gateway.generate(request_obj))
+                loop.close()
+            except Exception:
+                loop.close()
+                raise
+            
+            if response.success:
+                # 解析LLM返回的JSON
+                import json
+                try:
+                    # 尝试从响应中提取JSON
+                    content = response.content.strip()
+                    # 移除可能的markdown代码块标记
+                    if content.startswith('```json'):
+                        content = content[7:]
+                    if content.startswith('```'):
+                        content = content[3:]
+                    if content.endswith('```'):
+                        content = content[:-3]
+                    content = content.strip()
+                    
+                    llm_data = json.loads(content)
+                    news = llm_data.get('news', [])
+                except json.JSONDecodeError:
+                    # 如果解析失败，使用模拟数据
+                    logger.warning("LLM返回数据解析失败，使用模拟数据")
+                    news = []
+                    for i in range(page_size):
+                        date = datetime.now() - timedelta(days=i)
+                        news.append({
+                            "id": f"news_{i}",
+                            "title": f"{symbol or '市场'}重要新闻{i+1}",
+                            "summary": f"这是关于{symbol or '市场'}的新闻摘要{i+1}",
+                            "content": f"这是关于{symbol or '市场'}的详细新闻内容{i+1}",
+                            "source": "财经新闻网",
+                            "publish_time": date.isoformat(),
+                            "url": f"https://news.example.com/{i}",
+                            "symbol": symbol
+                        })
+            else:
+                # LLM调用失败，使用模拟数据
+                logger.warning(f"LLM调用失败: {response.error}，使用模拟数据")
+                news = []
+                for i in range(page_size):
+                    date = datetime.now() - timedelta(days=i)
+                    news.append({
+                        "id": f"news_{i}",
+                        "title": f"{symbol or '市场'}重要新闻{i+1}",
+                        "summary": f"这是关于{symbol or '市场'}的新闻摘要{i+1}",
+                        "content": f"这是关于{symbol or '市场'}的详细新闻内容{i+1}",
+                        "source": "财经新闻网",
+                        "publish_time": date.isoformat(),
+                        "url": f"https://news.example.com/{i}",
+                        "symbol": symbol
+                    })
+        except Exception as llm_error:
+            # LLM调用异常，使用模拟数据
+            logger.warning(f"LLM调用异常: {str(llm_error)}，使用模拟数据")
+            news = []
+            for i in range(page_size):
+                date = datetime.now() - timedelta(days=i)
+                news.append({
+                    "id": f"news_{i}",
+                    "title": f"{symbol or '市场'}重要新闻{i+1}",
+                    "summary": f"这是关于{symbol or '市场'}的新闻摘要{i+1}",
+                    "content": f"这是关于{symbol or '市场'}的详细新闻内容{i+1}",
+                    "source": "财经新闻网",
+                    "publish_time": date.isoformat(),
+                    "url": f"https://news.example.com/{i}",
+                    "symbol": symbol
+                })
         
         # 分页处理
         total = len(news)
@@ -1109,7 +1206,7 @@ def get_news():
 @data_bp.route('/analysis', methods=['GET'])
 @require_auth
 def get_analysis_reports():
-    """获取分析报告（支持按股票代码筛选）"""
+    """获取分析报告（支持按股票代码筛选，通过大模型获取）"""
     try:
         # 获取查询参数
         symbol = request.args.get('symbol')
@@ -1125,21 +1222,122 @@ def get_analysis_reports():
                 "error": message
             }), 400
         
-        # 获取分析报告（返回模拟数据）
-        reports = []
-        for i in range(page_size):
-            date = datetime.now() - timedelta(days=i*7)
-            reports.append({
-                "id": f"report_{i}",
-                "title": f"{symbol or '市场'}分析报告{i+1}",
-                "analyst": f"分析师{i+1}",
-                "institution": f"投资机构{i+1}",
-                "rating": ["买入", "持有", "卖出"][i % 3],
-                "target_price": 12.0 + i * 0.5,
-                "publish_time": date.isoformat(),
-                "summary": f"{symbol or '市场'}分析报告摘要{i+1}",
-                "symbol": symbol
-            })
+        # 通过大模型获取分析报告
+        try:
+            from app.services.llm_gateway import gateway, GatewayRequest
+            import asyncio
+            
+            # 构建提示词
+            prompt = f"""请生成关于{symbol or '股票市场'}的专业投资分析报告，要求：
+1. 生成{page_size}份分析报告
+2. 每份报告包含：标题、分析师、机构、评级、目标价、发布时间、摘要
+3. 评级包括：买入、持有、卖出
+4. 分析内容要专业、有参考价值
+5. 返回JSON格式，格式如下：
+{{
+  "reports": [
+    {{
+      "id": "analysis_1",
+      "title": "分析报告标题",
+      "analyst": "分析师姓名",
+      "institution": "投资机构名称",
+      "rating": "买入",
+      "target_price": 15.5,
+      "publish_time": "2025-01-20T10:00:00",
+      "summary": "分析报告摘要",
+      "symbol": "{symbol or ''}"
+    }}
+  ]
+}}"""
+            
+            # 调用大模型
+            request_obj = GatewayRequest(
+                messages=[
+                    {"role": "system", "content": "你是一个专业的股票投资分析专家，能够生成专业、有价值的投资分析报告。"},
+                    {"role": "user", "content": prompt}
+                ],
+                max_tokens=2000,
+                temperature=0.7
+            )
+            
+            # 同步调用（在Flask中）
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            try:
+                response = loop.run_until_complete(gateway.generate(request_obj))
+                loop.close()
+            except Exception:
+                loop.close()
+                raise
+            
+            if response.success:
+                # 解析LLM返回的JSON
+                import json
+                try:
+                    # 尝试从响应中提取JSON
+                    content = response.content.strip()
+                    # 移除可能的markdown代码块标记
+                    if content.startswith('```json'):
+                        content = content[7:]
+                    if content.startswith('```'):
+                        content = content[3:]
+                    if content.endswith('```'):
+                        content = content[:-3]
+                    content = content.strip()
+                    
+                    llm_data = json.loads(content)
+                    reports = llm_data.get('reports', [])
+                except json.JSONDecodeError:
+                    # 如果解析失败，使用模拟数据
+                    logger.warning("LLM返回数据解析失败，使用模拟数据")
+                    reports = []
+                    for i in range(page_size):
+                        date = datetime.now() - timedelta(days=i*7)
+                        reports.append({
+                            "id": f"analysis_{i}",
+                            "title": f"{symbol or '市场'}投资分析报告{i+1}",
+                            "analyst": f"分析师{i+1}",
+                            "institution": f"投资机构{i+1}",
+                            "rating": ["买入", "持有", "卖出"][i % 3],
+                            "target_price": 12.0 + i * 0.5,
+                            "publish_time": date.isoformat(),
+                            "summary": f"对{symbol or '市场'}的分析摘要{i+1}",
+                            "symbol": symbol
+                        })
+            else:
+                # LLM调用失败，使用模拟数据
+                logger.warning(f"LLM调用失败: {response.error}，使用模拟数据")
+                reports = []
+                for i in range(page_size):
+                    date = datetime.now() - timedelta(days=i*7)
+                    reports.append({
+                        "id": f"analysis_{i}",
+                        "title": f"{symbol or '市场'}投资分析报告{i+1}",
+                        "analyst": f"分析师{i+1}",
+                        "institution": f"投资机构{i+1}",
+                        "rating": ["买入", "持有", "卖出"][i % 3],
+                        "target_price": 12.0 + i * 0.5,
+                        "publish_time": date.isoformat(),
+                        "summary": f"对{symbol or '市场'}的分析摘要{i+1}",
+                        "symbol": symbol
+                    })
+        except Exception as llm_error:
+            # LLM调用异常，使用模拟数据
+            logger.warning(f"LLM调用异常: {str(llm_error)}，使用模拟数据")
+            reports = []
+            for i in range(page_size):
+                date = datetime.now() - timedelta(days=i*7)
+                reports.append({
+                    "id": f"analysis_{i}",
+                    "title": f"{symbol or '市场'}投资分析报告{i+1}",
+                    "analyst": f"分析师{i+1}",
+                    "institution": f"投资机构{i+1}",
+                    "rating": ["买入", "持有", "卖出"][i % 3],
+                    "target_price": 12.0 + i * 0.5,
+                    "publish_time": date.isoformat(),
+                    "summary": f"对{symbol or '市场'}的分析摘要{i+1}",
+                    "symbol": symbol
+                })
         
         # 分页处理
         total = len(reports)

@@ -20,7 +20,10 @@ const app = createApp(App)
 // 注册Element Plus图标（按需注册，减少初始化时间）
 const iconComponents = [
   'ArrowDown', 'ArrowUp', 'Check', 'Close', 'Delete', 'Edit', 'Plus', 
-  'Refresh', 'Search', 'Setting', 'User', 'Warning', 'Loading'
+  'Refresh', 'Search', 'Setting', 'User', 'Warning', 'Loading',
+  'VideoStop', 'VideoPause', 'VideoPlay', 'MagicStick', 'CircleClose',
+  'ChatDotRound', 'Document', 'TrendCharts', 'QuestionFilled', 'View',
+  'DataAnalysis', 'CopyDocument', 'Clock', 'Download'
 ]
 
 iconComponents.forEach(name => {
@@ -28,6 +31,11 @@ iconComponents.forEach(name => {
     app.component(name, (ElementPlusIconsVue as any)[name])
   }
 })
+
+// 注册 Magic 作为 MagicStick 的别名（Element Plus 图标库中没有 Magic，只有 MagicStick）
+if ((ElementPlusIconsVue as any)['MagicStick']) {
+  app.component('Magic', (ElementPlusIconsVue as any)['MagicStick'])
+}
 
 // 延迟注册其他图标
 setTimeout(() => {

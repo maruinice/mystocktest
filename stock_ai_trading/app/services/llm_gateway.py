@@ -265,8 +265,8 @@ class DeepSeekAdapter(ModelAdapter):
     async def _get_session(self):
         """获取或创建aiohttp会话"""
         if self.session is None:
-            timeout = aiohttp.ClientTimeout(total=90, connect=10)
-            self.session = aiohttp.ClientSession(timeout=timeout)
+            # 使用默认超时，避免在同步环境中使用 timeout 上下文管理器的问题
+            self.session = aiohttp.ClientSession()
         return self.session
     
     async def generate(self, request: GatewayRequest) -> GatewayResponse:
@@ -304,13 +304,16 @@ class DeepSeekAdapter(ModelAdapter):
             
             # 发送请求
             session = await self._get_session()
+            # 使用 ClientTimeout 对象，但不在构造函数中创建，避免同步环境问题
+            timeout = aiohttp.ClientTimeout(total=90, connect=10)
             async with session.post(
                 f"{self.base_url}/chat/completions",
                 json=data,
                 headers={
                     "Authorization": f"Bearer {self.api_key}",
                     "Content-Type": "application/json"
-                }
+                },
+                timeout=timeout
             ) as resp:
                 logger.info(f"[DeepSeek API] Response status: {resp.status}")
                 
@@ -942,20 +945,24 @@ def initialize_gateway():
         gateway.register_adapter('deepseek', DeepSeekAdapter(deepseek_config))
         logger.info("DeepSeek adapter registered as primary LLM")
     
-    # 注册OpenAI适配器（备用，可选）
+    # 注册OpenAI适配器（备用，可选）- 只有当API key不是占位符时才注册
     if hasattr(settings, 'OPENAI_API_KEY') and settings.OPENAI_API_KEY:
-        try:
-            openai_config = ModelConfig(
-                provider=ModelProvider.OPENAI,
-                model_name=getattr(settings, 'OPENAI_MODEL', 'gpt-3.5-turbo'),
-                api_key=settings.OPENAI_API_KEY,
-                base_url=getattr(settings, 'OPENAI_BASE_URL', None),
-                weight=1.0  # 较低权重
-            )
-            gateway.register_adapter('openai', OpenAIAdapter(openai_config))
-            logger.info("OpenAI adapter registered as backup LLM")
-        except ImportError:
-            logger.warning("OpenAI library not installed, skipping OpenAI adapter")
+        # 检查是否是占位符
+        if settings.OPENAI_API_KEY and settings.OPENAI_API_KEY != 'your_openai_api_key_here':
+            try:
+                openai_config = ModelConfig(
+                    provider=ModelProvider.OPENAI,
+                    model_name=getattr(settings, 'OPENAI_MODEL', 'gpt-3.5-turbo'),
+                    api_key=settings.OPENAI_API_KEY,
+                    base_url=getattr(settings, 'OPENAI_BASE_URL', None),
+                    weight=1.0  # 较低权重
+                )
+                gateway.register_adapter('openai', OpenAIAdapter(openai_config))
+                logger.info("OpenAI adapter registered as backup LLM")
+            except ImportError:
+                logger.warning("OpenAI library not installed, skipping OpenAI adapter")
+        else:
+            logger.info("OpenAI API key is placeholder, skipping OpenAI adapter registration")
     
     # 注册通义千问适配器
     if hasattr(settings, 'QWEN_API_KEY'):

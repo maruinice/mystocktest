@@ -136,7 +136,7 @@
               
               <div class="indicators-grid">
                 <div 
-                  v-for="indicator in technicalIndicators" 
+                  v-for="indicator in technicalIndicators.filter(i => i && i.code && i.parameters)" 
                   :key="indicator.code"
                   class="indicator-card"
                   :class="{ active: selectedIndicators.includes(indicator.code) }"
@@ -155,21 +155,22 @@
                   <div class="indicator-formula">{{ indicator.formula }}</div>
                   
                   <!-- 指标参数配置 -->
-                  <div v-if="selectedIndicators.includes(indicator.code)" class="indicator-params">
-                    <div 
-                      v-for="param in indicator.parameters" 
-                      :key="param.name"
-                      class="param-item"
-                    >
-                      <label>{{ param.label }}:</label>
-                      <el-input-number
-                        v-model="indicatorParams[indicator.code][param.name]"
-                        :min="param.min"
-                        :max="param.max"
-                        :step="param.step"
-                        size="small"
-                      />
-                    </div>
+                  <div v-if="selectedIndicators.includes(indicator.code) && indicator.parameters && Array.isArray(indicator.parameters) && indicator.parameters.length > 0" class="indicator-params">
+                    <template v-for="(param, paramIndex) in indicator.parameters" :key="paramIndex">
+                      <div 
+                        v-if="param && param.name && indicatorParams[indicator.code] && indicatorParams[indicator.code][param.name] !== undefined"
+                        class="param-item"
+                      >
+                        <label>{{ param.label || param.name }}:</label>
+                        <el-input-number
+                          v-model="indicatorParams[indicator.code][param.name]"
+                          :min="param.min || 0"
+                          :max="param.max || 100"
+                          :step="param.step || 1"
+                          size="small"
+                        />
+                      </div>
+                    </template>
                   </div>
                 </div>
               </div>
@@ -1029,23 +1030,49 @@ const validationResult = reactive({
 
 // 计算属性
 const availableIndicators = computed(() => {
-  return technicalIndicators.filter(indicator => 
-    selectedIndicators.value.includes(indicator.code)
-  )
+  return technicalIndicators
+    .filter(indicator => 
+      selectedIndicators.value.includes(indicator.code) &&
+      indicator.parameters && 
+      Array.isArray(indicator.parameters)
+    )
+    .map(indicator => ({
+      ...indicator,
+      parameters: indicator.parameters || []
+    }))
 })
 
 // 初始化指标参数
 const initIndicatorParams = () => {
-  technicalIndicators.forEach(indicator => {
-    if (!indicatorParams[indicator.code]) {
-      indicatorParams[indicator.code] = {}
-    }
-    indicator.parameters.forEach(param => {
-      if (!(param.name in indicatorParams[indicator.code])) {
-        indicatorParams[indicator.code][param.name] = param.default
+  try {
+    technicalIndicators.forEach(indicator => {
+      if (!indicator || !indicator.code) {
+        console.warn('Invalid indicator:', indicator)
+        return
+      }
+      
+      // 确保 indicatorParams 中有该指标的条目
+      if (!indicatorParams[indicator.code]) {
+        indicatorParams[indicator.code] = {}
+      }
+      
+      // 确保 parameters 存在且是数组
+      if (indicator.parameters && Array.isArray(indicator.parameters)) {
+        indicator.parameters.forEach(param => {
+          if (param && param.name) {
+            // 如果参数不存在，使用默认值初始化
+            if (!(param.name in indicatorParams[indicator.code])) {
+              indicatorParams[indicator.code][param.name] = param.default !== undefined ? param.default : 0
+            }
+          }
+        })
       }
     })
-  })
+    
+    console.log('Indicator params initialized:', indicatorParams)
+  } catch (error) {
+    console.error('Error initializing indicator params:', error)
+  }
 }
 
 // 方法
@@ -1355,7 +1382,36 @@ watch(() => props.editStrategy, (strategy) => {
 
 // 生命周期
 onMounted(() => {
-  initIndicatorParams()
+  try {
+    // 确保在组件挂载时初始化指标参数
+    initIndicatorParams()
+    
+    // 使用 nextTick 确保 DOM 更新后再检查
+    nextTick(() => {
+      // 验证所有选中的指标都已初始化
+      selectedIndicators.value.forEach(code => {
+        if (!indicatorParams[code]) {
+          console.warn(`Indicator params not initialized for: ${code}`)
+          const indicator = technicalIndicators.find(i => i.code === code)
+          if (indicator) {
+            if (!indicatorParams[code]) {
+              indicatorParams[code] = {}
+            }
+            if (indicator.parameters && Array.isArray(indicator.parameters)) {
+              indicator.parameters.forEach(param => {
+                if (param && param.name && !(param.name in indicatorParams[code])) {
+                  indicatorParams[code][param.name] = param.default !== undefined ? param.default : 0
+                }
+              })
+            }
+          }
+        }
+      })
+    })
+  } catch (error) {
+    console.error('StrategyBuilder onMounted error:', error)
+    ElMessage.error('策略构建器初始化失败: ' + (error as Error).message)
+  }
 })
 </script>
 
