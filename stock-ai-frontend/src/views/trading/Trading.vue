@@ -24,7 +24,7 @@
           </el-input>
           
           <div v-if="searchResults.length > 0" class="search-results">
-            <el-table :data="searchResults" @row-click="selectStock">
+            <el-table :data="searchResults" @row-click="selectStock" style="cursor: pointer">
               <el-table-column prop="symbol" label="代码" width="100" />
               <el-table-column prop="name" label="名称" />
               <el-table-column prop="current_price" label="现价" width="100">
@@ -101,7 +101,7 @@
           
           <el-form :model="orderForm" :rules="orderRules" ref="orderFormRef">
             <el-form-item label="股票代码" prop="symbol">
-              <el-input v-model="orderForm.symbol" placeholder="请选择股票" readonly />
+              <el-input v-model="orderForm.symbol" placeholder="请输入或选择股票" />
             </el-form-item>
             
             <el-form-item label="交易方向" prop="side">
@@ -454,7 +454,10 @@ const handleSearch = async () => {
       keyword: searchKeyword.value,
       limit: 10
     })
-    searchResults.value = response.data
+    searchResults.value = response.data.map((item: any) => ({
+      ...item,
+      symbol: item.symbol || item.code
+    }))
   } catch (error) {
     console.error('Search failed:', error)
   }

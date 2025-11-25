@@ -66,7 +66,7 @@ class DatabaseTradeService:
             account.profit_loss = Decimal(str(total_profit_loss))
             account.total_assets = account.available_cash + account.frozen_cash + account.market_value
             
-            if total_market_value > total_profit_loss:
+            if total_market_value - total_profit_loss > 0:
                 account.profit_loss_pct = Decimal(str(total_profit_loss / (total_market_value - total_profit_loss) * 100))
             else:
                 account.profit_loss_pct = Decimal('0')

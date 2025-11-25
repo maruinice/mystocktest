@@ -41,11 +41,11 @@
           </div>
           <div class="card-content">
             <div class="card-title">平均准确率</div>
-            <div class="card-value">{{ (dashboardStats.avg_accuracy * 100).toFixed(1) }}%</div>
+            <div class="card-value">{{ ((dashboardStats.avg_accuracy || 0) * 100).toFixed(1) }}%</div>
             <div class="card-progress">
               <el-progress
-                :percentage="dashboardStats.avg_accuracy * 100"
-                :color="getAccuracyColor(dashboardStats.avg_accuracy)"
+                :percentage="(dashboardStats.avg_accuracy || 0) * 100"
+                :color="getAccuracyColor(dashboardStats.avg_accuracy || 0)"
                 :stroke-width="4"
                 :show-text="false"
               />
@@ -63,7 +63,7 @@
             <div class="card-title">总请求数</div>
             <div class="card-value">{{ formatNumber(dashboardStats.total_requests) }}</div>
             <div class="card-subtitle">
-              成功率: {{ (dashboardStats.success_rate * 100).toFixed(1) }}%
+              成功率: {{ ((dashboardStats.success_rate || 0) * 100).toFixed(1) }}%
             </div>
           </div>
         </div>
@@ -260,8 +260,8 @@ const modelTrend = ref(0)
 
 // 计算属性
 const activeRate = computed(() => {
-  if (dashboardStats.value.total_models === 0) return 0
-  return Math.round((dashboardStats.value.active_models / dashboardStats.value.total_models) * 100)
+  if (!dashboardStats.value || dashboardStats.value.total_models === 0) return 0
+  return Math.round(((dashboardStats.value.active_models || 0) / dashboardStats.value.total_models) * 100)
 })
 
 // 方法
