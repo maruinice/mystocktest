@@ -209,6 +209,8 @@ class SyncManager:
                 'table': table_name,
                 'total_count': 0,
                 'last_sync_date': None,
+                'min_date': None,
+                'max_date': None,
                 'implemented': False
             }
         
@@ -218,17 +220,32 @@ class SyncManager:
             # 获取记录总数
             total_count = await service.get_record_count(table_name)
             
-            # 获取最新同步日期
-            last_sync_date = None
-            if table_name in ['trade_cal', 'daily_history', 'daily_basic', 'adj_factor', 'limit_prices', 'suspend_info']:
-                last_sync_date = await service.get_last_sync_date(table_name, 'trade_date' if table_name != 'trade_cal' else 'cal_date')
+            # 确定日期字段
+            date_field = 'trade_date'
+            if table_name == 'trade_cal':
+                date_field = 'cal_date'
             elif table_name in ['financial_indicators', 'audit_opinions']:
-                last_sync_date = await service.get_last_sync_date(table_name, 'ann_date')
+                date_field = 'ann_date'
+            elif table_name == 'industry_classification':
+                # 行业分类暂时没有很好的日期字段，尝试使用 updated_at 或 in_date
+                # 注意：in_date 目前在数据库中可能为 NULL，需要修复 SyncService
+                date_field = 'in_date' 
+            elif table_name == 'suspend_info':
+                date_field = 'suspend_date'
+            
+            # 获取日期范围
+            date_range = await service.get_sync_date_range(table_name, date_field)
+            
+            # 如果 industry_classification 的 in_date 为空，尝试使用 updated_at
+            if table_name == 'industry_classification' and not date_range['max_date']:
+                date_range = await service.get_sync_date_range(table_name, 'updated_at')
             
             return {
                 'table': table_name,
                 'total_count': total_count,
-                'last_sync_date': last_sync_date,
+                'last_sync_date': date_range['max_date'],
+                'min_date': date_range['min_date'],
+                'max_date': date_range['max_date'],
                 'implemented': True
             }
             
@@ -238,6 +255,8 @@ class SyncManager:
                 'table': table_name,
                 'total_count': 0,
                 'last_sync_date': None,
+                'min_date': None,
+                'max_date': None,
                 'error': str(e)
             }
 

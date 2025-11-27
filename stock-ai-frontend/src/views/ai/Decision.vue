@@ -1,452 +1,289 @@
 <template>
-  <div class="ai-decision-container">
+  <div class="ai-decision">
     <div class="page-header">
-      <h2>AI决策引擎</h2>
-      <p>基于多模型融合的智能投资决策系统</p>
+      <h2>AI决策中心</h2>
+      <p>查看多Agent分析生成的交易建议</p>
     </div>
 
-    <!-- 决策概览 -->
-    <el-row :gutter="20" class="overview-cards">
-      <el-col :span="6">
-        <div class="overview-card">
-          <div class="card-icon active-decisions">
-            <el-icon><MagicStick /></el-icon>
-          </div>
-          <div class="card-content">
-            <div class="card-title">活跃决策</div>
-            <div class="card-value">{{ activeDecisions }}</div>
-          </div>
-        </div>
-      </el-col>
-      <el-col :span="6">
-        <div class="overview-card">
-          <div class="card-icon success-rate">
-            <el-icon><TrendCharts /></el-icon>
-          </div>
-          <div class="card-content">
-            <div class="card-title">成功率</div>
-            <div class="card-value">{{ successRate }}%</div>
-          </div>
-        </div>
-      </el-col>
-      <el-col :span="6">
-        <div class="overview-card">
-          <div class="card-icon total-profit">
-            <el-icon><Money /></el-icon>
-          </div>
-          <div class="card-content">
-            <div class="card-title">总收益</div>
-            <div class="card-value">{{ totalProfit }}%</div>
-          </div>
-        </div>
-      </el-col>
-      <el-col :span="6">
-        <div class="overview-card">
-          <div class="card-icon model-count">
-            <el-icon><DataAnalysis /></el-icon>
-          </div>
-          <div class="card-content">
-            <div class="card-title">模型数量</div>
-            <div class="card-value">{{ modelCount }}</div>
-          </div>
-        </div>
-      </el-col>
-    </el-row>
-
-    <!-- 决策操作 -->
-    <div class="decision-actions">
-      <el-button type="primary" @click="generateDecision" :loading="generating">
-        <el-icon><MagicStick /></el-icon>
-        生成新决策
-      </el-button>
-      <el-button @click="refreshDecisions" :loading="loading">
+    <div class="actions">
+      <el-button @click="loadDecisions">
         <el-icon><Refresh /></el-icon>
         刷新
       </el-button>
-      <el-input
-        v-model="searchKeyword"
-        placeholder="搜索决策..."
-        style="width: 200px; margin-left: 12px;"
-        clearable
-      >
-        <template #prefix>
-          <el-icon><Search /></el-icon>
-        </template>
-      </el-input>
     </div>
 
     <!-- 决策列表 -->
-    <div class="card">
-      <div class="card-header">
-        <h3>决策记录</h3>
+    <el-table :data="decisions" v-loading="loading" stripe>
+      <el-table-column prop="stock_code" label="股票代码" width="100" />
+      <el-table-column prop="stock_name" label="股票名称" width="120" />
+      <el-table-column prop="final_score" label="综合评分" width="100">
+        <template #default="{ row }">
+          <el-tag :type="getScoreType(row.final_score)">
+            {{ row.final_score?.toFixed(1) || '-' }}
+          </el-tag>
+        </template>
+      </el-table-column>
+      <el-table-column prop="recommendation" label="操作建议" width="100">
+        <template #default="{ row }">
+          <el-tag :type="getRecommendationType(row.recommendation)">
+            {{ getRecommendationText(row.recommendation) }}
+          </el-tag>
+        </template>
+      </el-table-column>
+      <el-table-column prop="entry_price" label="建议买入价" width="110">
+        <template #default="{ row }">
+          {{ row.entry_price ? `¥${row.entry_price.toFixed(2)}` : '-' }}
+        </template>
+      </el-table-column>
+      <el-table-column prop="target_price" label="目标止盈价" width="110">
+        <template #default="{ row }">
+          {{ row.target_price ? `¥${row.target_price.toFixed(2)}` : '-' }}
+        </template>
+      </el-table-column>
+      <el-table-column prop="stop_loss_price" label="止损价" width="100">
+        <template #default="{ row }">
+          {{ row.stop_loss_price ? `¥${row.stop_loss_price.toFixed(2)}` : '-' }}
+        </template>
+      </el-table-column>
+      <el-table-column prop="expected_return" label="预期收益" width="100">
+        <template #default="{ row }">
+          <span v-if="row.expected_return" :class="row.expected_return > 0 ? 'profit' : 'loss'">
+            {{ row.expected_return.toFixed(2) }}%
+          </span>
+          <span v-else>-</span>
+        </template>
+      </el-table-column>
+      <el-table-column prop="holding_period" label="持仓周期" width="100">
+        <template #default="{ row }">
+          {{ row.holding_period ? `${row.holding_period}天` : '-' }}
+        </template>
+      </el-table-column>
+      <el-table-column prop="risk_level" label="风险等级" width="100">
+        <template #default="{ row }">
+          <el-tag :type="getRiskType(row.risk_level)">
+            {{ getRiskText(row.risk_level) }}
+          </el-tag>
+        </template>
+      </el-table-column>
+      <el-table-column prop="created_at" label="分析时间" width="160" />
+      <el-table-column label="操作" width="100" fixed="right">
+        <template #default="{ row }">
+          <el-button size="small" @click="viewDetail(row)">详情</el-button>
+        </template>
+      </el-table-column>
+    </el-table>
+
+    <!-- 详情对话框 -->
+    <el-dialog v-model="showDetail" title="分析详情" width="800px">
+      <div v-if="currentDecision">
+        <el-descriptions :column="2" border>
+          <el-descriptions-item label="股票代码">{{ currentDecision.stock_code }}</el-descriptions-item>
+          <el-descriptions-item label="股票名称">{{ currentDecision.stock_name || '-' }}</el-descriptions-item>
+          <el-descriptions-item label="综合评分">{{ currentDecision.final_score?.toFixed(2) }}</el-descriptions-item>
+          <el-descriptions-item label="共识度">{{ (currentDecision.consensus_level * 100).toFixed(1) }}%</el-descriptions-item>
+          <el-descriptions-item label="操作建议">
+            <el-tag :type="getRecommendationType(currentDecision.recommendation)">
+              {{ getRecommendationText(currentDecision.recommendation) }}
+            </el-tag>
+          </el-descriptions-item>
+          <el-descriptions-item label="风险等级">
+            <el-tag :type="getRiskType(currentDecision.risk_level)">
+              {{ getRiskText(currentDecision.risk_level) }}
+            </el-tag>
+          </el-descriptions-item>
+        </el-descriptions>
+
+        <el-divider />
+
+        <h4>交易建议</h4>
+        <el-descriptions :column="2" border>
+          <el-descriptions-item label="建议买入价">¥{{ currentDecision.entry_price?.toFixed(2) || '-' }}</el-descriptions-item>
+          <el-descriptions-item label="目标止盈价">¥{{ currentDecision.target_price?.toFixed(2) || '-' }}</el-descriptions-item>
+          <el-descriptions-item label="止损价">¥{{ currentDecision.stop_loss_price?.toFixed(2) || '-' }}</el-descriptions-item>
+          <el-descriptions-item label="预期收益">{{ currentDecision.expected_return?.toFixed(2) || '-' }}%</el-descriptions-item>
+          <el-descriptions-item label="建议持仓">{{ currentDecision.holding_period || '-' }}天</el-descriptions-item>
+        </el-descriptions>
+
+        <el-divider />
+
+        <h4>交易理由</h4>
+        <p>{{ currentDecision.trade_reason || '暂无' }}</p>
+
+        <h4>综合分析</h4>
+        <p>{{ currentDecision.summary }}</p>
+
+        <el-row :gutter="20">
+          <el-col :span="12">
+            <h4>优势</h4>
+            <ul v-if="currentDecision.strengths && currentDecision.strengths.length">
+              <li v-for="(item, index) in currentDecision.strengths" :key="index">{{ item }}</li>
+            </ul>
+            <p v-else>暂无</p>
+          </el-col>
+          <el-col :span="12">
+            <h4>劣势</h4>
+            <ul v-if="currentDecision.weaknesses && currentDecision.weaknesses.length">
+              <li v-for="(item, index) in currentDecision.weaknesses" :key="index">{{ item }}</li>
+            </ul>
+            <p v-else>暂无</p>
+          </el-col>
+        </el-row>
       </div>
-      
-      <el-table :data="filteredDecisions" v-loading="loading" stripe>
-        <el-table-column prop="decision_id" label="决策ID" width="120" />
-        <el-table-column prop="symbol" label="股票代码" width="100" />
-        <el-table-column prop="action" label="决策动作" width="100">
-          <template #default="{ row }">
-            <el-tag :type="getActionType(row.action)">
-              {{ getActionText(row.action) }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column prop="confidence" label="置信度" width="100">
-          <template #default="{ row }">
-            <el-progress
-              :percentage="Math.round(row.confidence * 100)"
-              :color="getConfidenceColor(row.confidence)"
-              :stroke-width="8"
-            />
-          </template>
-        </el-table-column>
-        <el-table-column prop="expected_return" label="预期收益" width="100">
-          <template #default="{ row }">
-            <span :class="row.expected_return >= 0 ? 'profit' : 'loss'">
-              {{ (row.expected_return * 100).toFixed(2) }}%
-            </span>
-          </template>
-        </el-table-column>
-        <el-table-column prop="risk_score" label="风险评分" width="100">
-          <template #default="{ row }">
-            <el-rate
-              v-model="row.risk_score"
-              disabled
-              :max="5"
-              :colors="['#67C23A', '#E6A23C', '#F56C6C']"
-            />
-          </template>
-        </el-table-column>
-        <el-table-column prop="status" label="状态" width="100">
-          <template #default="{ row }">
-            <el-tag :type="getStatusType(row.status)">
-              {{ getStatusText(row.status) }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column prop="created_at" label="创建时间" width="160">
-          <template #default="{ row }">
-            {{ formatDateTime(row.created_at) }}
-          </template>
-        </el-table-column>
-        <el-table-column label="操作" width="150" fixed="right">
-          <template #default="{ row }">
-            <el-button size="small" @click="viewDecision(row)">详情</el-button>
-            <el-button
-              size="small"
-              type="primary"
-              @click="executeDecision(row)"
-              :disabled="row.status !== 'pending'"
-            >
-              执行
-            </el-button>
-          </template>
-        </el-table-column>
-      </el-table>
-    </div>
+    </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
-import { formatDateTime } from '@/utils/format'
-import { getTagType, type TagType } from '@/utils/element-plus'
-import { aiDecisionApi } from '@/api/ai'
-import {
-  MagicStick,
-  TrendCharts,
-  Money,
-  DataAnalysis,
-  Refresh,
-  Search
-} from '@element-plus/icons-vue'
+import { Refresh } from '@element-plus/icons-vue'
+import axios from 'axios'
 
-// 响应式数据
+interface Decision {
+  result_id: string
+  stock_code: string
+  stock_name?: string
+  final_score?: number
+  recommendation?: string
+  consensus_level?: number
+  risk_level?: string
+  summary?: string
+  entry_price?: number
+  target_price?: number
+  stop_loss_price?: number
+  expected_return?: number
+  holding_period?: number
+  trade_reason?: string
+  strengths?: string[]
+  weaknesses?: string[]
+  created_at?: string
+}
+
 const loading = ref(false)
-const generating = ref(false)
-const searchKeyword = ref('')
+const decisions = ref<Decision[]>([])
+const showDetail = ref(false)
+const currentDecision = ref<Decision | null>(null)
 
-// 模拟数据
-const activeDecisions = ref(12)
-const successRate = ref(78.5)
-const totalProfit = ref(15.6)
-const modelCount = ref(5)
-
-const decisions = ref([
-  {
-    decision_id: 'DEC_001',
-    symbol: '000001',
-    action: 'buy',
-    confidence: 0.85,
-    expected_return: 0.12,
-    risk_score: 2,
-    status: 'pending',
-    created_at: '2023-12-01T10:00:00Z'
-  },
-  {
-    decision_id: 'DEC_002',
-    symbol: '000002',
-    action: 'sell',
-    confidence: 0.92,
-    expected_return: 0.08,
-    risk_score: 1,
-    status: 'executed',
-    created_at: '2023-12-01T09:30:00Z'
-  },
-  {
-    decision_id: 'DEC_003',
-    symbol: '600036',
-    action: 'hold',
-    confidence: 0.67,
-    expected_return: -0.03,
-    risk_score: 3,
-    status: 'cancelled',
-    created_at: '2023-12-01T09:00:00Z'
-  }
-])
-
-// 计算属性
-const filteredDecisions = computed(() => {
-  if (!searchKeyword.value) return decisions.value
-  
-  return decisions.value.filter(decision =>
-    decision.symbol.includes(searchKeyword.value) ||
-    decision.decision_id.includes(searchKeyword.value)
-  )
-})
-
-// 方法
-const getActionText = (action: string) => {
-  const actionMap: Record<string, string> = {
-    buy: '买入',
-    sell: '卖出',
-    hold: '持有'
-  }
-  return actionMap[action] || action
-}
-
-const getActionType = (action: string): TagType => {
-  const typeMap: Record<string, string> = {
-    buy: 'success',
-    sell: 'danger',
-    hold: 'warning'
-  }
-  return getTagType(typeMap[action] || 'info')
-}
-
-const getStatusText = (status: string) => {
-  const statusMap: Record<string, string> = {
-    pending: '待执行',
-    executed: '已执行',
-    cancelled: '已取消'
-  }
-  return statusMap[status] || status
-}
-
-const getStatusType = (status: string): TagType => {
-  const typeMap: Record<string, string> = {
-    pending: 'warning',
-    executed: 'success',
-    cancelled: 'info'
-  }
-  return getTagType(typeMap[status] || 'info')
-}
-
-const getConfidenceColor = (confidence: number) => {
-  if (confidence >= 0.8) return '#67C23A'
-  if (confidence >= 0.6) return '#E6A23C'
-  return '#F56C6C'
-}
-
-const refreshDecisions = async () => {
+const loadDecisions = async () => {
   loading.value = true
   try {
-    const response = await aiDecisionApi.getDecisions({
-      page: 1,
-      page_size: 50
+    // 获取最近的分析会话
+    const sessionsResponse = await axios.get('/api/agent/sessions', {
+      params: { page: 1, page_size: 10 }
     })
     
-    if (response.data?.decisions) {
-      decisions.value = response.data.decisions
+    if (sessionsResponse.data.code === 200 && sessionsResponse.data.data.items.length > 0) {
+      // 获取最新会话的结果
+      const latestSession = sessionsResponse.data.data.items[0]
+      const resultsResponse = await axios.get(`/api/agent/sessions/${latestSession.session_id}/results`)
+      
+      if (resultsResponse.data.code === 200) {
+        decisions.value = resultsResponse.data.data
+      }
+    } else {
+      decisions.value = []
     }
-    
-    ElMessage.success('刷新成功')
   } catch (error) {
-    console.error('刷新决策失败:', error)
-    ElMessage.error('刷新失败')
+    console.error('加载决策失败:', error)
+    ElMessage.error('加载决策失败')
   } finally {
     loading.value = false
   }
 }
 
-const generateDecision = async () => {
-  generating.value = true
-  try {
-    const response = await aiDecisionApi.generateDecision({
-      strategy_type: 'auto',
-      force_analysis: true
-    })
-    
-    if (response.data) {
-      // 刷新决策列表
-      await refreshDecisions()
-      ElMessage.success('决策生成成功')
-    }
-  } catch (error) {
-    console.error('决策生成失败:', error)
-    ElMessage.error('决策生成失败')
-  } finally {
-    generating.value = false
+const viewDetail = (decision: Decision) => {
+  currentDecision.value = decision
+  showDetail.value = true
+}
+
+const getScoreType = (score?: number) => {
+  if (!score) return ''
+  if (score >= 80) return 'success'
+  if (score >= 65) return 'warning'
+  return 'danger'
+}
+
+const getRecommendationType = (rec?: string) => {
+  if (!rec) return ''
+  if (rec === 'strong_buy' || rec === 'buy') return 'success'
+  if (rec === 'hold') return 'warning'
+  return 'danger'
+}
+
+const getRecommendationText = (rec?: string) => {
+  const map: Record<string, string> = {
+    strong_buy: '强烈买入',
+    buy: '买入',
+    hold: '持有',
+    sell: '卖出',
+    strong_sell: '强烈卖出'
   }
+  return map[rec || ''] || '-'
 }
 
-const viewDecision = (decision: any) => {
-  ElMessage.info(`查看决策详情: ${decision.decision_id}`)
+const getRiskType = (risk?: string) => {
+  if (!risk) return ''
+  if (risk === 'low') return 'success'
+  if (risk === 'medium') return 'warning'
+  return 'danger'
 }
 
-const executeDecision = async (decision: any) => {
-  try {
-    const response = await aiDecisionApi.executeDecision(decision.decision_id)
-    
-    if (response.data) {
-      decision.status = 'executed'
-      ElMessage.success('决策执行成功')
-    }
-  } catch (error) {
-    console.error('决策执行失败:', error)
-    ElMessage.error('决策执行失败')
+const getRiskText = (risk?: string) => {
+  const map: Record<string, string> = {
+    low: '低',
+    medium: '中',
+    high: '高',
+    very_high: '极高'
   }
+  return map[risk || ''] || '-'
 }
 
-onMounted(async () => {
-  // 初始化时加载决策列表
-  await refreshDecisions()
+onMounted(() => {
+  loadDecisions()
 })
 </script>
 
 <style lang="scss" scoped>
-.ai-decision-container {
-  padding: 24px;
+.ai-decision {
+  padding: 20px;
 }
 
 .page-header {
-  margin-bottom: 24px;
+  margin-bottom: 20px;
   
   h2 {
     margin: 0 0 8px 0;
     font-size: 24px;
-    font-weight: 600;
-    color: var(--el-text-color-primary);
   }
   
   p {
     margin: 0;
-    color: var(--el-text-color-regular);
+    color: #666;
   }
 }
 
-.overview-cards {
-  margin-bottom: 24px;
-}
-
-.overview-card {
-  background: var(--el-bg-color-overlay);
-  border: 1px solid var(--el-border-color-light);
-  border-radius: 8px;
-  padding: 20px;
-  display: flex;
-  align-items: center;
-  transition: all 0.3s ease;
-  
-  &:hover {
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  }
-}
-
-.card-icon {
-  width: 48px;
-  height: 48px;
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-right: 16px;
-  
-  .el-icon {
-    font-size: 24px;
-    color: white;
-  }
-  
-  &.active-decisions {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  }
-  
-  &.success-rate {
-    background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
-  }
-  
-  &.total-profit {
-    background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
-  }
-  
-  &.model-count {
-    background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
-  }
-}
-
-.card-content {
-  flex: 1;
-}
-
-.card-title {
-  font-size: 14px;
-  color: var(--el-text-color-regular);
-  margin-bottom: 4px;
-}
-
-.card-value {
-  font-size: 24px;
-  font-weight: 600;
-  color: var(--el-text-color-primary);
-  font-family: 'Courier New', monospace;
-}
-
-.decision-actions {
-  display: flex;
-  align-items: center;
+.actions {
   margin-bottom: 16px;
-  gap: 12px;
-}
-
-.card {
-  background: var(--el-bg-color-overlay);
-  border: 1px solid var(--el-border-color-light);
-  border-radius: 8px;
-  padding: 20px;
-}
-
-.card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 16px;
-  
-  h3 {
-    margin: 0;
-    font-size: 16px;
-    font-weight: 600;
-    color: var(--el-text-color-primary);
-  }
 }
 
 .profit {
-  color: var(--el-color-success);
+  color: #67C23A;
   font-weight: 600;
 }
 
 .loss {
-  color: var(--el-color-danger);
+  color: #F56C6C;
   font-weight: 600;
+}
+
+h4 {
+  margin: 16px 0 8px 0;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+ul {
+  margin: 8px 0;
+  padding-left: 20px;
 }
 </style>

@@ -396,6 +396,51 @@ class MultiAgentEngine:
         summary += f"建议操作：{recommendation}。"
         summary += f"风险等级：{risk_level}。"
         
+        # 生成交易建议
+        current_price = market_data.get('current_price', 0)
+        entry_price = None
+        target_price = None
+        stop_loss_price = None
+        expected_return = None
+        holding_period = None
+        trade_reason = None
+        
+        if current_price > 0 and recommendation in ['buy', 'strong_buy']:
+            # 建议买入价：当前价格的98%-100%（略低于当前价）
+            entry_price = round(current_price * 0.99, 2)
+            
+            # 根据评分计算预期收益率
+            if final_score >= 80:
+                expected_return = round(15 + (final_score - 80) * 0.5, 2)  # 15%-25%
+                holding_period = 30  # 中长期持有
+            elif final_score >= 65:
+                expected_return = round(8 + (final_score - 65) * 0.4, 2)  # 8%-14%
+                holding_period = 20  # 中期持有
+            else:
+                expected_return = round(5 + (final_score - 45) * 0.15, 2)  # 5%-8%
+                holding_period = 10  # 短期持有
+            
+            # 目标止盈价
+            target_price = round(entry_price * (1 + expected_return / 100), 2)
+            
+            # 止损价：根据风险等级设置
+            if risk_level == 'low':
+                stop_loss_price = round(entry_price * 0.95, 2)  # 5%止损
+            elif risk_level == 'medium':
+                stop_loss_price = round(entry_price * 0.92, 2)  # 8%止损
+            else:
+                stop_loss_price = round(entry_price * 0.90, 2)  # 10%止损
+            
+            # 交易理由
+            reason_parts = []
+            if strengths:
+                reason_parts.append(f"优势：{', '.join(strengths[:3])}")
+            if final_score >= 70:
+                reason_parts.append(f"多Agent共识度高({consensus_level:.2f})")
+            if consensus_level >= 0.8:
+                reason_parts.append("各分析师意见一致")
+            trade_reason = "；".join(reason_parts) if reason_parts else "综合分析建议买入"
+        
         return {
             'final_score': round(final_score, 2),
             'agent_scores': agent_scores,
@@ -405,7 +450,13 @@ class MultiAgentEngine:
             'summary': summary,
             'strengths': strengths,
             'weaknesses': weaknesses,
-            'market_data_snapshot': market_data
+            'market_data_snapshot': market_data,
+            'entry_price': entry_price,
+            'target_price': target_price,
+            'stop_loss_price': stop_loss_price,
+            'expected_return': expected_return,
+            'holding_period': holding_period,
+            'trade_reason': trade_reason
         }
     
     async def _get_market_data(self, stock_code: str) -> Dict[str, Any]:

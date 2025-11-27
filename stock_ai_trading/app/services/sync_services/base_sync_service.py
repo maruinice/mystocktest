@@ -99,6 +99,42 @@ class BaseSyncService:
         except Exception as e:
             logger.error(f"获取最新同步日期失败: {e}")
             return None
+
+    async def get_sync_date_range(self, table_name: str, date_field: str = 'trade_date') -> Dict[str, Optional[str]]:
+        """
+        获取表中数据的日期范围
+        
+        Args:
+            table_name: 表名
+            date_field: 日期字段名
+            
+        Returns:
+            {'min_date': 'YYYYMMDD', 'max_date': 'YYYYMMDD'}
+        """
+        try:
+            db = next(get_db())
+            query = text(f"SELECT MIN({date_field}) as min_date, MAX({date_field}) as max_date FROM {table_name}")
+            result = db.execute(query).fetchone()
+            
+            min_date = None
+            max_date = None
+            
+            if result:
+                if result[0]:
+                    min_date = result[0]
+                    if hasattr(min_date, 'strftime'):
+                        min_date = min_date.strftime('%Y%m%d')
+                
+                if result[1]:
+                    max_date = result[1]
+                    if hasattr(max_date, 'strftime'):
+                        max_date = max_date.strftime('%Y%m%d')
+            
+            return {'min_date': min_date, 'max_date': max_date}
+            
+        except Exception as e:
+            logger.error(f"获取同步日期范围失败: {e}")
+            return {'min_date': None, 'max_date': None}
     
     async def get_record_count(self, table_name: str, condition: str = '') -> int:
         """

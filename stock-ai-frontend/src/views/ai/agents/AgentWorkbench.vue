@@ -196,8 +196,8 @@ const loadAgents = async () => {
 
 const loadModels = async () => {
   try {
-    const response = await axios.get('/api/model-management/models')
-    if (response.data.code === 200) {
+    const response = await axios.get('/api/models')
+    if (response.data.success) {
       availableModels.value = response.data.data.items.filter((m: any) => m.enabled)
     }
   } catch (error) {

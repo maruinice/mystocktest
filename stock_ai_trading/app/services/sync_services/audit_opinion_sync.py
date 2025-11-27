@@ -8,6 +8,7 @@ import time
 from typing import Dict, Any
 from datetime import datetime, timedelta
 from sqlalchemy import text
+import pandas as pd
 
 from .base_sync_service import BaseSyncService
 from app.core.database import get_db
@@ -18,14 +19,16 @@ logger = logging.getLogger(__name__)
 class AuditOpinionSyncService(BaseSyncService):
     """审计意见同步服务"""
     
-    async def sync(self, start_date: str = None, end_date: str = None, start_position: int = 1, **kwargs) -> Dict[str, Any]:
+    async def sync(self, start_date: str = None, end_date: str = None, start_position: int = 1, direction: str = 'forward', days: int = 365, **kwargs) -> Dict[str, Any]:
         """
         同步审计意见数据
         
         Args:
-            start_date: 开始日期 (YYYYMMDD)，默认为数据库最新日期
-            end_date: 结束日期 (YYYYMMDD)，默认为今天
+            start_date: 开始日期 (YYYYMMDD)
+            end_date: 结束日期 (YYYYMMDD)
             start_position: 起始位置（断点续传）
+            direction: 同步方向 ('forward': 向后/最新, 'backward': 向前/历史)
+            days: 向前同步时的天数
             
         Returns:
             同步结果
@@ -35,21 +38,6 @@ class AuditOpinionSyncService(BaseSyncService):
             
             if not self.pro:
                 raise ValueError("Tushare API未初始化")
-            
-            # 设置默认日期范围
-            if not end_date:
-                end_date = datetime.now().strftime('%Y%m%d')
-            
-            if not start_date:
-                # 尝试从数据库获取最新日期
-                last_date = await self.get_last_sync_date('audit_opinions', 'ann_date')
-                if last_date:
-                    start_date = last_date
-                else:
-                    # 默认3年前
-                    start_date = (datetime.now() - timedelta(days=365*3)).strftime('%Y%m%d')
-            
-            self.update_progress(0, 1, f"准备同步审计意见: {start_date} - {end_date}")
             
             # 获取所有股票代码
             stock_codes = await self._get_all_stock_codes()
@@ -69,16 +57,50 @@ class AuditOpinionSyncService(BaseSyncService):
                 self.finish_sync(False, f"起始位置超出范围: {start_position} > {total_stocks}")
                 return {'success': False, 'message': '起始位置超出范围'}
             
-            self.update_progress(0, total_stocks, f"开始同步 {total_stocks} 只股票的审计意见")
+            self.update_progress(0, total_stocks, f"开始同步 {total_stocks} 只股票的审计意见 ({'向后' if direction == 'forward' else '向前'})")
             
             # 逐个股票同步
             total_count = 0
             success_count = 0
             
+            # 预先获取每只股票的日期范围
+            stock_date_ranges = await self._get_all_stocks_date_ranges()
+            
             for i, ts_code in enumerate(stock_codes[start_position-1:], start_position):
                 try:
+                    # 确定该股票的同步日期范围
+                    stock_start_date = start_date
+                    stock_end_date = end_date
+                    
+                    if not stock_start_date or not stock_end_date:
+                        min_date, max_date = stock_date_ranges.get(ts_code, (None, None))
+                        
+                        if direction == 'forward':
+                            # 向后同步：从 max_date + 1 到 今天
+                            if max_date:
+                                stock_start_date = (datetime.strptime(max_date, '%Y%m%d') + timedelta(days=1)).strftime('%Y%m%d')
+                            else:
+                                # 如果没有数据，默认同步最近3年
+                                stock_start_date = (datetime.now() - timedelta(days=365*3)).strftime('%Y%m%d')
+                            
+                            stock_end_date = datetime.now().strftime('%Y%m%d')
+                            
+                        elif direction == 'backward':
+                            # 向前同步：从 min_date - days 到 min_date - 1
+                            if min_date:
+                                stock_end_date = (datetime.strptime(min_date, '%Y%m%d') - timedelta(days=1)).strftime('%Y%m%d')
+                                stock_start_date = (datetime.strptime(stock_end_date, '%Y%m%d') - timedelta(days=days)).strftime('%Y%m%d')
+                            else:
+                                # 如果没有数据，默认同步最近3年
+                                stock_end_date = datetime.now().strftime('%Y%m%d')
+                                stock_start_date = (datetime.now() - timedelta(days=365*3)).strftime('%Y%m%d')
+                    
+                    # 如果开始日期晚于结束日期，说明不需要同步
+                    if stock_start_date > stock_end_date:
+                        continue
+                        
                     count = await self._sync_stock_audit_opinions(
-                        ts_code, start_date, end_date
+                        ts_code, stock_start_date, stock_end_date
                     )
                     
                     if count > 0:
@@ -113,8 +135,7 @@ class AuditOpinionSyncService(BaseSyncService):
                 'success': True,
                 'message': f'成功同步{total_count}条审计意见',
                 'data': {
-                    'start_date': start_date,
-                    'end_date': end_date,
+                    'direction': direction,
                     'total_stocks': total_stocks,
                     'success_stocks': success_count,
                     'total_records': total_count,
@@ -127,6 +148,17 @@ class AuditOpinionSyncService(BaseSyncService):
             logger.error(error_msg)
             self.finish_sync(False, error_msg)
             return {'success': False, 'message': error_msg}
+
+    async def _get_all_stocks_date_ranges(self) -> Dict[str, tuple]:
+        """获取所有股票的日期范围 (min_date, max_date)"""
+        try:
+            db = next(get_db())
+            query = text("SELECT ts_code, MIN(ann_date), MAX(ann_date) FROM audit_opinions GROUP BY ts_code")
+            result = db.execute(query).fetchall()
+            return {row[0]: (row[1], row[2]) for row in result}
+        except Exception as e:
+            logger.error(f"获取股票日期范围失败: {e}")
+            return {}
     
     async def _get_all_stock_codes(self):
         """获取所有股票代码"""
@@ -152,42 +184,34 @@ class AuditOpinionSyncService(BaseSyncService):
             if df.empty:
                 return 0
             
-            # 保存到数据库
+            # 处理数据：将NaN替换为None
+            df = df.where(pd.notnull(df), None)
+            
+            # 动态构建插入SQL
+            columns = df.columns.tolist()
+            # 确保包含 updated_at
+            if 'updated_at' not in columns:
+                columns.append('updated_at')
+            
+            placeholders = [f":{col}" for col in columns if col != 'updated_at']
+            placeholders.append('NOW()')
+            
+            update_clause = [f"{col}=VALUES({col})" for col in columns if col not in ['ts_code', 'ann_date', 'end_date', 'created_at']]
+            
+            insert_sql = text(f"""
+                INSERT INTO audit_opinions ({', '.join(columns)})
+                VALUES ({', '.join(placeholders)})
+                ON DUPLICATE KEY UPDATE
+                {', '.join(update_clause)}
+            """)
+            
+            # 批量插入
             db = next(get_db())
-            count = 0
+            data_list = df.to_dict('records')
             
-            for _, row in df.iterrows():
-                try:
-                    insert_sql = text("""
-                        INSERT INTO audit_opinions 
-                        (ts_code, ann_date, end_date, audit_result, audit_fees, audit_agency, audit_sign, updated_at)
-                        VALUES (:ts_code, :ann_date, :end_date, :audit_result, :audit_fees, :audit_agency, :audit_sign, NOW())
-                        ON DUPLICATE KEY UPDATE
-                        audit_result = VALUES(audit_result),
-                        audit_fees = VALUES(audit_fees),
-                        audit_agency = VALUES(audit_agency),
-                        audit_sign = VALUES(audit_sign),
-                        updated_at = NOW()
-                    """)
-                    
-                    db.execute(insert_sql, {
-                        'ts_code': row['ts_code'],
-                        'ann_date': row.get('ann_date', ''),
-                        'end_date': row.get('end_date', ''),
-                        'audit_result': row.get('audit_result', ''),
-                        'audit_fees': row.get('audit_fees', None),
-                        'audit_agency': row.get('audit_agency', ''),
-                        'audit_sign': row.get('audit_sign', '')
-                    })
-                    
-                    count += 1
-                    
-                except Exception as e:
-                    logger.error(f"插入审计意见失败: {e}")
-                    continue
-            
+            db.execute(insert_sql, data_list)
             db.commit()
-            return count
+            return len(data_list)
             
         except Exception as e:
             logger.error(f"同步股票 {ts_code} 审计意见失败: {e}")

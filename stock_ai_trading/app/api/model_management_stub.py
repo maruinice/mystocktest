@@ -10,21 +10,63 @@ from datetime import datetime
 model_mgmt_bp = Blueprint('model_management', __name__, url_prefix='/api')
 
 
-@model_mgmt_bp.route('/models', methods=['GET'])
+@model_mgmt_bp.route('/model-management/models', methods=['GET'])
 def stub_get_models():
+    """获取模型列表 - 从数据库读取真实数据"""
+    from app.core.database import SessionLocal
+    from sqlalchemy import text
+    
     page = int(request.args.get('page', 1))
     per_page = int(request.args.get('per_page', 20))
-    return jsonify({
-        'success': True,
-        'message': 'stub: models list',
-        'data': {
-            'items': [],
-            'total': 0,
-            'page': page,
-            'per_page': per_page,
-            'pages': 0
-        }
-    }), 200
+    
+    db = SessionLocal()
+    try:
+        # 查询模型数据
+        result = db.execute(text("SELECT * FROM ai_models WHERE enabled = 1"))
+        rows = result.fetchall()
+        columns = result.keys()
+        
+        # 转换为字典列表
+        items = []
+        for row in rows:
+            model_dict = dict(zip(columns, row))
+            items.append({
+                'model_id': model_dict.get('model_id'),
+                'name': model_dict.get('name'),
+                'display_name': model_dict.get('display_name') or model_dict.get('name'),
+                'description': model_dict.get('description'),
+                'model_type': model_dict.get('model_type'),
+                'provider': model_dict.get('provider'),
+                'enabled': bool(model_dict.get('enabled')),
+                'status': model_dict.get('status'),
+                'created_at': str(model_dict.get('created_at')) if model_dict.get('created_at') else None
+            })
+        
+        return jsonify({
+            'code': 200,
+            'message': 'success',
+            'data': {
+                'items': items,
+                'total': len(items),
+                'page': page,
+                'per_page': per_page,
+                'pages': (len(items) + per_page - 1) // per_page
+            }
+        }), 200
+    except Exception as e:
+        return jsonify({
+            'code': 500,
+            'message': f'查询失败: {str(e)}',
+            'data': {
+                'items': [],
+                'total': 0,
+                'page': page,
+                'per_page': per_page,
+                'pages': 0
+            }
+        }), 500
+    finally:
+        db.close()
 
 
 @model_mgmt_bp.route('/models', methods=['POST'])

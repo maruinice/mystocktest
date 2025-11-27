@@ -66,8 +66,8 @@
                   <span class="value">{{ source.count || 0 }}</span>
                 </div>
                 <div class="stat-item">
-                  <span class="label">最后更新:</span>
-                  <span class="value">{{ formatDate(source.last_date) }}</span>
+                  <span class="label">数据范围:</span>
+                  <span class="value">{{ formatDateRange(source.min_date, source.max_date) }}</span>
                 </div>
                 <div class="stat-item">
                   <span class="label">同步频率:</span>
@@ -230,6 +230,20 @@
     >
       <div v-if="selectedSource" class="sync-params">
         <el-form :model="syncParams" label-width="120px">
+          <el-form-item label="同步方向">
+            <el-radio-group v-model="syncParams.direction">
+              <el-radio label="forward">向后更新 (最新)</el-radio>
+              <el-radio label="backward">向前追溯 (历史)</el-radio>
+            </el-radio-group>
+          </el-form-item>
+          
+          <template v-if="syncParams.direction === 'backward'">
+            <el-form-item label="回溯天数">
+              <el-input-number v-model="syncParams.days" :min="1" :max="3650" :step="30" />
+              <span class="ml-2 text-gray-500">天</span>
+            </el-form-item>
+          </template>
+          
           <el-form-item 
             v-for="param in getSyncParams(selectedSource)"
             :key="param.name"
@@ -285,21 +299,45 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { Download, Refresh, Timer } from '@element-plus/icons-vue'
 import { dataManagementApi } from '@/api/data-management'
 
+// 定义数据源接口
+interface DataSource {
+  id: string
+  key: string
+  name: string
+  description: string
+  table: string
+  frequency: string
+  api: string
+  implemented: boolean
+  schedule: string
+  priority: string
+  count: number
+  last_date: string | null
+  min_date: string | null
+  max_date: string | null
+  syncing: boolean
+  enabled: boolean
+  progress: number
+  current: number
+  total: number
+  message: string
+}
+
 // 响应式数据
 const syncingAll = ref(false)
 const syncing = ref(false)
 const historyLoading = ref(false)
 
-const dataSources = ref([])
+const dataSources = ref<DataSource[]>([])
 
 const syncHistory = ref([])
-const selectedSource = ref(null)
+const selectedSource = ref<DataSource | null>(null)
 
 const historyDialogVisible = ref(false)
 const scheduleDialogVisible = ref(false)
 const paramsDialogVisible = ref(false)
 
-const syncParams = reactive({})
+const syncParams = reactive<Record<string, any>>({})
 
 const historyPagination = reactive({
   page: 1,
@@ -327,6 +365,8 @@ const loadSyncServices = async () => {
         priority: service.frequency === '每日' ? 'high' : 'medium',
         count: 0,
         last_date: null,
+        min_date: null,
+        max_date: null,
         syncing: false,
         enabled: true,
         progress: 0,
@@ -356,6 +396,8 @@ const refreshStatistics = async () => {
       if (result.success) {
         source.count = result.data.total_count || 0
         source.last_date = result.data.last_sync_date || null
+        source.min_date = result.data.min_date || null
+        source.max_date = result.data.max_date || null
       }
     } catch (error) {
       console.error(`获取${source.name}统计失败:`, error)
@@ -431,19 +473,25 @@ const syncAllData = async () => {
 const syncSingleSource = (source: any) => {
   selectedSource.value = source
   
-  // 如果需要参数，显示参数对话框
-  const needsParams = ['limit_prices', 'suspend', 'audit'].includes(source.id)
+  // 重置参数
+  Object.keys(syncParams).forEach(key => {
+    delete syncParams[key]
+  })
   
-  if (needsParams) {
-    // 重置参数
-    Object.keys(syncParams).forEach(key => {
-      delete syncParams[key]
-    })
-    paramsDialogVisible.value = true
-  } else {
-    // 直接同步
-    executeSyncWithParams()
-  }
+  // 设置默认参数
+  syncParams.direction = 'forward'
+  syncParams.days = 365
+  
+  // 如果需要额外参数，显示参数对话框
+  // 现在所有服务都支持方向选择，所以总是显示对话框
+  paramsDialogVisible.value = true
+}
+
+const formatDateRange = (minDate: string, maxDate: string) => {
+  if (!minDate && !maxDate) return '暂无数据'
+  const start = minDate ? formatDate(minDate) : '?'
+  const end = maxDate ? formatDate(maxDate) : '?'
+  return `${start} 至 ${end}`
 }
 
 const executeSyncWithParams = async () => {

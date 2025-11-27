@@ -168,6 +168,12 @@ class StockSelectionResult(Base):
     strengths = Column(JSON, comment='优势')
     weaknesses = Column(JSON, comment='劣势')
     market_data_snapshot = Column(JSON, comment='市场数据快照')
+    entry_price = Column(Float, comment='建议买入价')
+    target_price = Column(Float, comment='目标止盈价')
+    stop_loss_price = Column(Float, comment='止损价')
+    expected_return = Column(Float, comment='预期收益率(%)')
+    holding_period = Column(Integer, comment='建议持仓天数')
+    trade_reason = Column(Text, comment='交易理由')
     rank = Column(Integer, comment='排名')
     created_at = Column(DateTime, default=func.now(), nullable=False, comment='创建时间')
     

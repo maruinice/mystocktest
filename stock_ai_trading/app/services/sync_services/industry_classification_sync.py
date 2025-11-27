@@ -118,15 +118,20 @@ class IndustryClassificationSyncService(BaseSyncService):
                     industry_code = row.get('industry_code', '')
                     industry_name = row.get('industry_name', '')
                     
+                    in_date = row.get('in_date', None)
+                    out_date = row.get('out_date', None)
+                    
                     if not ts_code or not industry_code:
                         continue
                     
                     insert_sql = text("""
                         INSERT INTO industry_classification
-                        (ts_code, industry_code, industry_name, level, classification_type, created_at, updated_at)
-                        VALUES (:ts_code, :industry_code, :industry_name, :level, :classification_type, NOW(), NOW())
+                        (ts_code, industry_code, industry_name, level, classification_type, in_date, out_date, created_at, updated_at)
+                        VALUES (:ts_code, :industry_code, :industry_name, :level, :classification_type, :in_date, :out_date, NOW(), NOW())
                         ON DUPLICATE KEY UPDATE
                         industry_name = VALUES(industry_name),
+                        in_date = VALUES(in_date),
+                        out_date = VALUES(out_date),
                         updated_at = NOW()
                     """)
                     
@@ -135,7 +140,9 @@ class IndustryClassificationSyncService(BaseSyncService):
                         'industry_code': industry_code,
                         'industry_name': industry_name,
                         'level': level_num,
-                        'classification_type': 'SW2021'
+                        'classification_type': 'SW2021',
+                        'in_date': in_date,
+                        'out_date': out_date
                     })
                     
                     count += 1
