@@ -1,19 +1,14 @@
 <template>
   <div class="models-container">
     <div class="page-header">
-      <h2>模型管理中心</h2>
-      <p>管理AI模型和多模型组合策略</p>
+      <h2>LLM模型配置中心</h2>
+      <p>统一管理所有大语言模型的配置、测试和监控</p>
     </div>
 
     <!-- 标签页导航 -->
     <el-tabs v-model="activeTab" class="model-tabs">
-      <!-- 仪表盘 -->
-      <el-tab-pane label="仪表盘" name="dashboard">
-        <ModelDashboard />
-      </el-tab-pane>
-
-      <!-- 模型管理 -->
-      <el-tab-pane label="模型管理" name="models">
+      <!-- 模型配置 -->
+      <el-tab-pane label="模型配置" name="models">
         <ModelList
           :refresh-trigger="refreshTrigger"
           @create-model="handleCreateModel"
@@ -22,14 +17,14 @@
         />
       </el-tab-pane>
 
-      <!-- 组合管理 -->
-      <el-tab-pane label="组合管理" name="ensembles">
-        <EnsembleManager />
-      </el-tab-pane>
-
       <!-- 模型测试 -->
       <el-tab-pane label="模型测试" name="testing">
         <ModelTester />
+      </el-tab-pane>
+
+      <!-- 使用统计 -->
+      <el-tab-pane label="使用统计" name="dashboard">
+        <ModelDashboard />
       </el-tab-pane>
     </el-tabs>
 
@@ -134,13 +129,12 @@ import { formatDateTime } from '@/utils/format'
 import { getTagType, type TagType } from '@/utils/element-plus'
 import ModelList from '@/components/model/ModelList.vue'
 import ModelForm from '@/components/model/ModelForm.vue'
-import EnsembleManager from '@/components/model/EnsembleManager.vue'
 import ModelTester from '@/components/model/ModelTester.vue'
 import ModelDashboard from '@/components/model/ModelDashboard.vue'
 import { type AIModel, ModelType } from '@/api/model-management'
 
 // 响应式数据
-const activeTab = ref('dashboard')
+const activeTab = ref('models')
 const showModelForm = ref(false)
 const showModelDetail = ref(false)
 const selectedModel = ref<AIModel | null>(null)

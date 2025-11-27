@@ -4,7 +4,7 @@
     <el-aside :width="isCollapse ? '64px' : '200px'" class="sidebar">
       <div class="logo">
         <el-icon v-if="isCollapse" size="24"><TrendCharts /></el-icon>
-        <span v-else class="logo-text">股票AI交易</span>
+        <span v-else class="logo-text">迅龙AI股票交易</span>
       </div>
       
       <el-menu
@@ -49,9 +49,11 @@
             <el-icon><MagicStick /></el-icon>
             <span>AI功能</span>
           </template>
+          <el-menu-item index="/admin/ai/models">LLM模型配置</el-menu-item>
+          <el-menu-item index="/admin/ai/agents/workbench">Agent工作台</el-menu-item>
+          <el-menu-item index="/admin/ai/agents/analysis">多Agent分析</el-menu-item>
           <el-menu-item index="/admin/ai/decision">AI决策</el-menu-item>
-          <el-menu-item index="/admin/ai/risk">风险控制</el-menu-item>
-          <el-menu-item index="/admin/ai/models">模型管理</el-menu-item>
+          <!-- <el-menu-item index="/admin/ai/risk">风险控制</el-menu-item> -->
         </el-sub-menu>
         
         <el-sub-menu index="data-management">

@@ -1,7 +1,7 @@
 {
   "name": "stock-ai-frontend",
   "version": "1.0.0",
-  "description": "股票AI交易系统前端",
+  "description": "迅龙AI股票交易系统前端",
   "type": "module",
   "scripts": {
     "dev": "vite",

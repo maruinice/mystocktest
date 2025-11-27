@@ -1,24 +1,36 @@
 export interface Order {
   order_id: string
   symbol: string
+  code?: string
+  name?: string
   side: 'buy' | 'sell'
   order_type: 'market' | 'limit'
   quantity: number
   price?: number
+  avg_price?: number
+  commission?: number
   filled_quantity: number
   status: 'pending' | 'filled' | 'cancelled' | 'rejected'
   created_at: string
   updated_at?: string
+  filled_at?: string
 }
 
 export interface Position {
   symbol: string
+  code?: string
+  name?: string
   quantity: number
   available_quantity: number
+  frozen_quantity?: number
   avg_cost: number
+  last_price?: number
   market_value: number
-  unrealized_pnl: number
-  unrealized_pnl_ratio: number
+  profit_loss?: number
+  profit_loss_pct?: number
+  unrealized_pnl?: number // 兼容旧字段
+  unrealized_pnl_ratio?: number // 兼容旧字段
+  cost_basis?: number
   updated_at: string
 }
 

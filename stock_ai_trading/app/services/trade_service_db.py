@@ -82,7 +82,7 @@ class DatabaseTradeService:
         finally:
             db.close()
     
-    def get_positions(self, user_id: str, code: str = '') -> List[DBPosition]:
+    def get_positions(self, user_id: str, code: str = '') -> List[Dict[str, Any]]:
         """获取持仓列表"""
         try:
             db = next(get_db())
@@ -95,6 +95,7 @@ class DatabaseTradeService:
             positions = query.filter(DBPosition.quantity > 0).all()
             
             # 更新实时价格（这里简化处理，实际应该从行情服务获取）
+            positions_data = []
             for position in positions:
                 # TODO: 从行情服务获取实时价格
                 position.market_value = Decimal(str(position.quantity)) * position.last_price
@@ -105,9 +106,12 @@ class DatabaseTradeService:
                     position.profit_loss_pct = Decimal(str(float(position.profit_loss) / float(position.cost_basis) * 100))
                 else:
                     position.profit_loss_pct = Decimal('0')
+                
+                # 在Session关闭前转换为字典
+                positions_data.append(position.to_dict())
             
             db.commit()
-            return positions
+            return positions_data
             
         except Exception as e:
             logger.error(f"获取持仓列表失败: {e}", exc_info=True)

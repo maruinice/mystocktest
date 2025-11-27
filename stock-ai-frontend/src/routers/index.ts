@@ -110,7 +110,25 @@ const routes: RouteRecordRaw[] = [
         name: 'AIModels',
         component: () => import('../views/ai/Models.vue'),
         meta: {
-          title: '模型管理',
+          title: 'LLM模型配置',
+          requiresAuth: true
+        }
+      },
+      {
+        path: 'ai/agents/workbench',
+        name: 'AgentWorkbench',
+        component: () => import('../views/ai/agents/AgentWorkbench.vue'),
+        meta: {
+          title: 'Agent工作台',
+          requiresAuth: true
+        }
+      },
+      {
+        path: 'ai/agents/analysis',
+        name: 'MultiAgentAnalysis',
+        component: () => import('../views/ai/agents/MultiAgentAnalysis.vue'),
+        meta: {
+          title: '多Agent分析',
           requiresAuth: true
         }
       },
@@ -179,7 +197,7 @@ const router = createRouter({
 // 路由守卫 - 启用认证检查
 router.beforeEach(async (to, _from, next) => {
   if (to.meta?.title) {
-    document.title = `${to.meta.title} - 股票AI交易系统`
+    document.title = `${to.meta.title} - 迅龙AI股票交易系统`
   }
 
   const requiresAuth = to.meta?.requiresAuth === true

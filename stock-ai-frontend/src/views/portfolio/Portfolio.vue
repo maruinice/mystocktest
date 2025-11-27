@@ -104,10 +104,10 @@
       </div>
       
       <el-table :data="positions" v-loading="loading" @row-click="viewStockDetail">
-        <el-table-column prop="symbol" label="股票代码" width="120">
+        <el-table-column prop="symbol" label="股票代码" width="180">
           <template #default="{ row }">
             <div class="stock-info">
-              <div class="stock-symbol">{{ row.symbol }}</div>
+              <div class="stock-symbol">{{ row.code || row.symbol }}（{{ row.name }}）</div>
             </div>
           </template>
         </el-table-column>
@@ -132,7 +132,7 @@
         
         <el-table-column prop="current_price" label="现价" width="120" align="right">
           <template #default="{ row }">
-            <span class="stock-price">¥{{ getCurrentPrice(row.symbol).toFixed(2) }}</span>
+            <span class="stock-price">¥{{ (row.last_price || 0).toFixed(2) }}</span>
           </template>
         </el-table-column>
         
@@ -142,14 +142,14 @@
           </template>
         </el-table-column>
         
-        <el-table-column prop="unrealized_pnl" label="浮动盈亏" width="140" align="right">
+        <el-table-column prop="profit_loss" label="浮动盈亏" width="140" align="right">
           <template #default="{ row }">
             <div class="pnl-info">
-              <div :class="row.unrealized_pnl >= 0 ? 'stock-up' : 'stock-down'">
-                {{ row.unrealized_pnl >= 0 ? '+' : '' }}¥{{ formatNumber(row.unrealized_pnl) }}
+              <div :class="(row.profit_loss || 0) >= 0 ? 'stock-up' : 'stock-down'">
+                {{ (row.profit_loss || 0) >= 0 ? '+' : '' }}¥{{ formatNumber(row.profit_loss || 0) }}
               </div>
-              <div class="pnl-ratio" :class="row.unrealized_pnl_ratio >= 0 ? 'stock-up' : 'stock-down'">
-                {{ row.unrealized_pnl_ratio >= 0 ? '+' : '' }}{{ (row.unrealized_pnl_ratio * 100).toFixed(2) }}%
+              <div class="pnl-ratio" :class="(row.profit_loss_pct || 0) >= 0 ? 'stock-up' : 'stock-down'">
+                {{ (row.profit_loss_pct || 0) >= 0 ? '+' : '' }}{{ ((row.profit_loss_pct || 0) * 100).toFixed(2) }}%
               </div>
             </div>
           </template>
@@ -273,8 +273,17 @@ const totalPnlRatio = computed(() =>
   totalCost.value > 0 ? totalPnl.value / totalCost.value : 0
 )
 
-// 模拟最近交易数据
-const recentTrades = computed(() => [])
+// 最近交易数据
+const recentTrades = computed(() => {
+  return tradingStore.filledOrders.slice(0, 10).map(order => ({
+    symbol: order.code || order.symbol,
+    side: order.side,
+    quantity: order.filled_quantity || order.quantity,
+    price: order.avg_price || order.price,
+    amount: (order.filled_quantity || order.quantity) * (order.avg_price || order.price || 0),
+    executed_at: order.updated_at || order.created_at
+  }))
+})
 
 // 图表配置
 const positionDistributionOption = computed(() => ({

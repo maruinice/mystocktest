@@ -167,6 +167,14 @@ def create_flask_app(config_name='development'):
     except Exception as e:
         logger.warning(f"Failed to initialize Swagger: {e}")
     
+    # 启动持仓价格更新服务
+    try:
+        from app.services.position_price_updater import position_price_updater
+        position_price_updater.start()
+        logger.info("持仓价格更新服务已启动")
+    except Exception as e:
+        logger.warning(f"持仓价格更新服务启动失败: {e}")
+    
     # 注册中间件
     register_flask_middleware(flask_app)
     

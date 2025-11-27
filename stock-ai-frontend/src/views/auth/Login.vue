@@ -2,7 +2,7 @@
   <div class="login-container">
     <div class="login-card">
       <div class="login-header">
-        <h1 class="login-title">股票AI交易系统</h1>
+        <h1 class="login-title">迅龙AI股票交易系统</h1>
         <p class="login-subtitle">智能投资，精准决策</p>
       </div>
       

@@ -1,4 +1,4 @@
-# 股票AI交易系统 - 前端
+# 迅龙AI股票交易系统 - 前端
 
 基于 Vue 3 + TypeScript 的现代化股票交易系统前端应用。
 
@@ -151,7 +151,7 @@ npm run format
 VITE_API_BASE_URL=http://127.0.0.1:5000/api
 
 # 应用标题
-VITE_APP_TITLE=股票AI交易系统
+VITE_APP_TITLE=迅龙AI股票交易系统
 
 # 应用版本
 VITE_APP_VERSION=1.0.0

@@ -175,6 +175,19 @@
             </el-descriptions-item>
           </el-descriptions>
         </div>
+        
+        <!-- 实时行情 -->
+        <div v-if="selectedStock" class="card mt-4">
+          <div class="card-header">
+            <h3>实时行情</h3>
+          </div>
+          <RealtimeQuote 
+            :stock-code="selectedStock.symbol" 
+            :auto-refresh="true"
+            :refresh-interval="5000"
+            ref="realtimeQuoteRef"
+          />
+        </div>
       </el-col>
     </el-row>
     
@@ -203,9 +216,22 @@
           </template>
         </el-table-column>
         <el-table-column prop="quantity" label="数量" width="100" />
-        <el-table-column prop="price" label="价格" width="100">
+        <el-table-column prop="price" label="委托/成交价" width="140">
           <template #default="{ row }">
-            {{ row.price ? `¥${row.price.toFixed(2)}` : '-' }}
+            <div>
+              <div v-if="row.order_type === 'limit'">委托: ¥{{ row.price.toFixed(2) }}</div>
+              <div v-if="row.avg_price" class="text-success">成交: ¥{{ row.avg_price.toFixed(2) }}</div>
+            </div>
+          </template>
+        </el-table-column>
+        <el-table-column prop="commission" label="手续费" width="100">
+          <template #default="{ row }">
+            ¥{{ (row.commission || 0).toFixed(2) }}
+          </template>
+        </el-table-column>
+        <el-table-column label="成交金额" width="120">
+          <template #default="{ row }">
+            ¥{{ ((row.filled_quantity || 0) * (row.avg_price || 0)).toFixed(2) }}
           </template>
         </el-table-column>
         <el-table-column prop="filled_quantity" label="成交数量" width="100" />
@@ -247,6 +273,7 @@ import { dataApi } from '@/api/data'
 import { formatNumber, formatPercent, formatDateTime } from '@/utils/format'
 import type { StockInfo, StockSearch } from '@/types/data'
 import type { PlaceOrderRequest } from '@/types/trading'
+import RealtimeQuote from '@/components/RealtimeQuote.vue'
 import { use } from 'echarts/core'
 import { CanvasRenderer } from 'echarts/renderers'
 import { CandlestickChart, LineChart } from 'echarts/charts'
@@ -272,6 +299,7 @@ use([
 ])
 
 const tradingStore = useTradingStore()
+const realtimeQuoteRef = ref<InstanceType<typeof RealtimeQuote> | null>(null)
 
 // 响应式数据
 const searchKeyword = ref('')

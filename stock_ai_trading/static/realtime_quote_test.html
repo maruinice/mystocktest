@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>实时行情测试</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        h1 {
+            color: white;
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 32px;
+        }
+        
+        .quote-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+        
+        .quote-card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            transition: transform 0.3s;
+        }
+        
+        .quote-card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .quote-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+        
+        .stock-code {
+            font-size: 20px;
+            font-weight: bold;
+            color: #333;
+        }
+        
+        .stock-name {
+            font-size: 14px;
+            color: #666;
+        }
+        
+        .source-tag {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            background: #e3f2fd;
+            color: #1976d2;
+        }
+        
+        .price-section {
+            text-align: center;
+            margin: 20px 0;
+        }
+        
+        .current-price {
+            font-size: 36px;
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+        
+        .price-up {
+            color: #f44336;
+        }
+        
+        .price-down {
+            color: #4caf50;
+        }
+        
+        .price-change {
+            font-size: 16px;
+        }
+        
+        .detail-section {
+            margin-top: 20px;
+        }
+        
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        
+        .detail-label {
+            color: #999;
+            font-size: 14px;
+        }
+        
+        .detail-value {
+            color: #333;
+            font-size: 14px;
+            font-weight: 500;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+        }
+        
+        .error {
+            text-align: center;
+            padding: 40px;
+            color: #f44336;
+        }
+        
+        .refresh-info {
+            text-align: center;
+            color: white;
+            margin-top: 20px;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📈 实时行情监控</h1>
+        
+        <div class="quote-grid" id="quoteGrid">
+            <!-- 行情卡片将在这里动态生成 -->
+        </div>
+        
+        <div class="refresh-info">
+            自动刷新中... 上次更新: <span id="lastUpdate">--:--:--</span>
+        </div>
+    </div>
+
+    <script>
+        // 股票列表
+        const stocks = [
+            { code: '000001', name: '平安银行' },
+            { code: '600519', name: '贵州茅台' },
+            { code: '600036', name: '招商银行' },
+            { code: '000858', name: '五粮液' }
+        ];
+
+        // 获取实时行情
+        async function fetchQuote(stockCode) {
+            try {
+                const response = await fetch(`/api/quote/realtime/${stockCode}`);
+                const data = await response.json();
+                return data.success ? data.data : null;
+            } catch (error) {
+                console.error(`获取${stockCode}行情失败:`, error);
+                return null;
+            }
+        }
+
+        // 格式化数字
+        function formatNumber(num) {
+            if (num >= 100000000) {
+                return (num / 100000000).toFixed(2) + '亿';
+            } else if (num >= 10000) {
+                return (num / 10000).toFixed(2) + '万';
+            }
+            return num.toString();
+        }
+
+        // 格式化时间
+        function formatTime(time) {
+            if (!time || time.length < 14) return time;
+            const hour = time.substring(8, 10);
+            const minute = time.substring(10, 12);
+            const second = time.substring(12, 14);
+            return `${hour}:${minute}:${second}`;
+        }
+
+        // 创建行情卡片
+        function createQuoteCard(quote) {
+            if (!quote) {
+                return `
+                    <div class="quote-card">
+                        <div class="error">加载失败</div>
+                    </div>
+                `;
+            }
+
+            const priceClass = quote.change >= 0 ? 'price-up' : 'price-down';
+            const changeText = quote.change >= 0 ? `+${quote.change.toFixed(2)}` : quote.change.toFixed(2);
+            const changePctText = quote.change_pct >= 0 ? `+${quote.change_pct.toFixed(2)}%` : `${quote.change_pct.toFixed(2)}%`;
+
+            return `
+                <div class="quote-card">
+                    <div class="quote-header">
+                        <div>
+                            <div class="stock-code">${quote.code}</div>
+                            <div class="stock-name">${quote.name}</div>
+                        </div>
+                        <div class="source-tag">${quote.source}</div>
+                    </div>
+                    
+                    <div class="price-section">
+                        <div class="current-price ${priceClass}">
+                            ¥${quote.current.toFixed(2)}
+                        </div>
+                        <div class="price-change ${priceClass}">
+                            ${changeText} (${changePctText})
+                        </div>
+                    </div>
+                    
+                    <div class="detail-section">
+                        <div class="detail-row">
+                            <span class="detail-label">今开</span>
+                            <span class="detail-value">¥${quote.open.toFixed(2)}</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">昨收</span>
+                            <span class="detail-value">¥${quote.close.toFixed(2)}</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">最高</span>
+                            <span class="detail-value price-up">¥${quote.high.toFixed(2)}</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">最低</span>
+                            <span class="detail-value price-down">¥${quote.low.toFixed(2)}</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">成交量</span>
+                            <span class="detail-value">${formatNumber(quote.volume)}</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">更新时间</span>
+                            <span class="detail-value">${formatTime(quote.time)}</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // 更新所有行情
+        async function updateAllQuotes() {
+            const grid = document.getElementById('quoteGrid');
+            grid.innerHTML = stocks.map(() => `
+                <div class="quote-card">
+                    <div class="loading">加载中...</div>
+                </div>
+            `).join('');
+
+            const quotes = await Promise.all(
+                stocks.map(stock => fetchQuote(stock.code))
+            );
+
+            grid.innerHTML = quotes.map(createQuoteCard).join('');
+
+            // 更新时间
+            const now = new Date();
+            document.getElementById('lastUpdate').textContent = 
+                `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
+        }
+
+        // 初始加载
+        updateAllQuotes();
+
+        // 每5秒自动刷新
+        setInterval(updateAllQuotes, 5000);
+    </script>
+</body>
+</html>

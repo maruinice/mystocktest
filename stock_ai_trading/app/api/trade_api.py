@@ -203,17 +203,11 @@ def get_positions():
         # 确保user_id是字符串类型
         user_id = str(g.current_user.get('id') or g.current_user.get('user_id', '1'))
         
-        # 获取持仓列表
-        positions = trade_service.get_positions(
+        # 获取持仓列表（已经是字典列表）
+        positions_data = trade_service.get_positions(
             user_id=user_id,
             code=symbol  # 注意参数名映射
         )
-        
-        # 转换为字典格式
-        positions_data = []
-        for position in positions:
-            # 数据库模型直接调用to_dict()
-            positions_data.append(position.to_dict())
         
         return jsonify({
             'success': True,

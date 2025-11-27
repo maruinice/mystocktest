@@ -40,6 +40,7 @@ from app.api.portfolio_flask import portfolio_bp
 from app.api.data_management_api import data_mgmt_bp
 from app.api.screening_api import screening_bp
 from app.api.data_sync_api import data_sync_bp  # 数据同步API
+from app.api.quote_api import quote_bp  # 实时行情API
 # 尝试加载模型管理相关蓝图，失败时回退到占位接口以保证核心服务可启动
 try:
     from app.api.model_management_flask import model_mgmt_bp
@@ -62,6 +63,16 @@ except Exception as e:
     print(f"[WARN] 模型测试模块加载失败，跳过注册: {e}")
     model_test_bp = None
     _enable_model_test = False
+
+# Agent API
+try:
+    from app.api.agent_flask import agent_bp
+    _enable_agent = True
+except Exception as e:
+    print(f"[WARN] Agent模块加载失败，跳过注册: {e}")
+    agent_bp = None
+    _enable_agent = False
+
 from app.middleware.auth import AuthMiddleware
 from app.utils.jwt_utils import jwt_manager
 from app.config.config import get_config
@@ -108,6 +119,22 @@ def create_app(config_name='development'):
         app.logger.info("LLM网关初始化成功")
     except Exception as e:
         app.logger.warning(f"LLM网关初始化失败: {e}")
+    
+    # 启动订单撮合服务
+    try:
+        from app.services.order_matching_service import order_matching_service
+        order_matching_service.start()
+        app.logger.info("订单撮合服务已启动")
+    except Exception as e:
+        app.logger.warning(f"订单撮合服务启动失败: {e}")
+    
+    # 启动持仓价格更新服务
+    try:
+        from app.services.position_price_updater import position_price_updater
+        position_price_updater.start()
+        app.logger.info("持仓价格更新服务已启动")
+    except Exception as e:
+        app.logger.warning(f"持仓价格更新服务启动失败: {e}")
     
     return app
 
@@ -250,6 +277,8 @@ def register_blueprints(app):
     app.register_blueprint(risk_bp, url_prefix=f'{api_prefix}/risk')
     app.register_blueprint(ai_decision_bp, url_prefix=f'{api_prefix}/ai-decision')
     app.register_blueprint(portfolio_bp)
+    app.register_blueprint(quote_bp, url_prefix=f'{api_prefix}/quote')  # 实时行情API
+    # 数据管理相关API
     app.register_blueprint(data_mgmt_bp)  # data_mgmt_bp已经有自己的url_prefix='/api/data-management'
     app.register_blueprint(screening_bp, url_prefix=f'{api_prefix}/screening')  # 选股API
     app.register_blueprint(data_sync_bp, url_prefix=f'{api_prefix}/data-sync')  # 数据同步API
@@ -257,6 +286,9 @@ def register_blueprints(app):
         app.register_blueprint(model_mgmt_bp)
     if model_test_bp is not None:
         app.register_blueprint(model_test_bp)
+    if agent_bp is not None and _enable_agent:
+        app.register_blueprint(agent_bp, url_prefix=f'{api_prefix}/agent')
+        app.logger.info("Agent API已注册")
     
     # 根路径
     @app.route('/')

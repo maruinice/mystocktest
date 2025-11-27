@@ -2,7 +2,7 @@
 """
 快速启动脚本 - 简化版
 
-一键启动股票AI交易系统的核心服务
+一键启动迅龙AI股票交易系统的核心服务
 """
 
 import os
@@ -37,7 +37,7 @@ def run_service(name, command, cwd=None):
 def main():
     """主函数"""
     print("=" * 50)
-    print("🚀 股票AI交易系统 - 快速启动")
+    print("🚀 迅龙AI股票交易系统 - 快速启动")
     print("=" * 50)
     
     base_dir = Path(__file__).parent
