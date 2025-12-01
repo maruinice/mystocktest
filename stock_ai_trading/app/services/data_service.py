@@ -8,6 +8,7 @@ from typing import List, Optional, Dict, Any, Tuple
 from datetime import datetime, timedelta
 import json
 import random
+import requests
 from sqlalchemy import text
 
 from app.models.stock import Stock, StockQuote, FinancialData, MarketIndicator
@@ -24,7 +25,132 @@ class DataService:
     def __init__(self):
         """初始化数据服务"""
         # 移除内存缓存，改用数据库查询
-        pass
+        self.headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+            'Referer': 'http://finance.sina.com.cn',
+        }
+
+    def fetch_realtime_quotes(self, codes: List[str]) -> Dict[str, Dict[str, Any]]:
+        """
+        从外部API获取实时行情
+        Args:
+            codes: 股票代码列表 (如 ['600000.SH', '000001.SZ'])
+        Returns:
+            Dict: {code: quote_data}
+        """
+        if not codes:
+            return {}
+            
+        try:
+            # 转换代码格式：600000.SH -> sh600000
+            sina_codes = []
+            code_map = {}  # sh600000 -> 600000.SH
+            
+            for code in codes:
+                if '.' in code:
+                    num, market = code.split('.')
+                    sina_code = f"{market.lower()}{num}"
+                    sina_codes.append(sina_code)
+                    code_map[sina_code] = code
+                else:
+                    # 尝试推断
+                    if code.startswith('6'):
+                        sina_code = f"sh{code}"
+                        code_map[sina_code] = f"{code}.SH"
+                    elif code.startswith(('0', '3')):
+                        sina_code = f"sz{code}"
+                        code_map[sina_code] = f"{code}.SZ"
+                    elif code.startswith(('4', '8')):
+                        sina_code = f"bj{code}"
+                        code_map[sina_code] = f"{code}.BJ"
+                    else:
+                        continue
+                    sina_codes.append(sina_code)
+            
+            if not sina_codes:
+                return {}
+                
+            # 分批请求，每批不超过50个
+            results = {}
+            batch_size = 50
+            
+            for i in range(0, len(sina_codes), batch_size):
+                batch = sina_codes[i:i+batch_size]
+                url = f"http://hq.sinajs.cn/list={','.join(batch)}"
+                
+                response = requests.get(url, headers=self.headers, timeout=5)
+                if response.status_code != 200:
+                    continue
+                    
+                content = response.text
+                # 解析响应: var hq_str_sh600000="浦发银行,9.660,9.650,9.680,9.720,9.630,9.670,9.680,18695916,180947693.000,18200,9.670,147300,9.660,111800,9.650,192500,9.640,116300,9.630,10300,9.680,246500,9.690,303500,9.700,286400,9.710,344600,9.720,2024-05-15,15:00:00,00,";
+                
+                lines = content.strip().split('\n')
+                for line in lines:
+                    if not line.startswith('var hq_str_'):
+                        continue
+                        
+                    parts = line.split('=')
+                    if len(parts) < 2:
+                        continue
+                        
+                    sina_code = parts[0].replace('var hq_str_', '')
+                    data_str = parts[1].strip('";')
+                    
+                    if not data_str:
+                        continue
+                        
+                    data_parts = data_str.split(',')
+                    if len(data_parts) < 30:
+                        continue
+                        
+                    original_code = code_map.get(sina_code)
+                    if not original_code:
+                        continue
+                        
+                    # 解析数据
+                    try:
+                        name = data_parts[0]
+                        open_price = float(data_parts[1])
+                        pre_close = float(data_parts[2])
+                        current_price = float(data_parts[3])
+                        high_price = float(data_parts[4])
+                        low_price = float(data_parts[5])
+                        volume = float(data_parts[8])
+                        amount = float(data_parts[9])
+                        date = data_parts[30]
+                        time_str = data_parts[31]
+                        
+                        # 计算涨跌幅
+                        change = current_price - pre_close
+                        change_percent = (change / pre_close * 100) if pre_close > 0 else 0.0
+                        
+                        results[original_code] = {
+                            'symbol': original_code,
+                            'code': original_code.split('.')[0],
+                            'name': name,
+                            'current_price': current_price,
+                            'open_price': open_price,
+                            'high_price': high_price,
+                            'low_price': low_price,
+                            'pre_close': pre_close,
+                            'change': change,
+                            'change_percent': change_percent, # 保持百分比数值，如 1.5 表示 1.5%
+                            'volume': volume,
+                            'amount': amount,
+                            'trade_date': date,
+                            'trade_time': time_str,
+                            'timestamp': datetime.now().isoformat()
+                        }
+                    except (ValueError, IndexError) as e:
+                        logger.warning(f"解析股票数据失败 {sina_code}: {e}")
+                        continue
+                        
+            return results
+            
+        except Exception as e:
+            logger.error(f"获取实时行情失败: {e}")
+            return {}
     
     def get_stock_list(self, market: str = 'all', industry: str = '', 
                       keyword: str = '', page: int = 1, size: int = 50) -> Tuple[List[Dict[str, Any]], int]:
@@ -448,9 +574,31 @@ class DataService:
             
             # 转换为字典格式
             results = []
+            
+            # 收集需要获取实时行情的代码
+            codes_to_fetch = []
             for row in rows:
-                # 涨跌幅转换：数据库中存储的是百分比形式（如-1.6298），需要除以100转为小数形式（-0.016298）
-                change_percent = float(row[7]) / 100.0 if row[7] else 0.0
+                codes_to_fetch.append(row[0]) # ts_code
+                
+            # 获取实时行情
+            realtime_quotes = self.fetch_realtime_quotes(codes_to_fetch)
+            
+            for row in rows:
+                ts_code = row[0]
+                
+                # 优先使用实时行情
+                if ts_code in realtime_quotes:
+                    quote = realtime_quotes[ts_code]
+                    current_price = quote['current_price']
+                    change_percent = quote['change_percent'] / 100.0 # 转换为小数
+                    change = quote['change']
+                    trade_date = quote['trade_date']
+                else:
+                    # 涨跌幅转换：数据库中存储的是百分比形式（如-1.6298），需要除以100转为小数形式（-0.016298）
+                    change_percent = float(row[7]) / 100.0 if row[7] else 0.0
+                    current_price = float(row[6]) if row[6] else 0.0
+                    change = float(row[8]) if row[8] else 0.0
+                    trade_date = str(row[9]) if row[9] else None
                 
                 results.append({
                     'symbol': row[0],  # ts_code
@@ -460,10 +608,10 @@ class DataService:
                     'industry': row[5],
                     'type': 'stock',
                     # 行情数据
-                    'current_price': float(row[6]) if row[6] else 0.0,
+                    'current_price': current_price,
                     'change_percent': change_percent,
-                    'change': float(row[8]) if row[8] else 0.0,
-                    'trade_date': str(row[9]) if row[9] else None
+                    'change': change,
+                    'trade_date': trade_date
                 })
             
             logger.info(f"搜索股票: keyword={keyword}, type={search_type}, 找到 {len(results)} 条记录")
@@ -509,8 +657,41 @@ class DataService:
                 return None
             
             # 转换为字典格式（包含基本信息和行情数据）
-            # 涨跌幅转换：数据库中存储的是百分比形式（如-1.6298），需要除以100转为小数形式（-0.016298）
-            change_percent = float(row[16]) / 100.0 if row[16] else 0.0
+            
+            # 尝试获取实时行情
+            realtime_quote = None
+            try:
+                quotes = self.fetch_realtime_quotes([row[0]])
+                if quotes and row[0] in quotes:
+                    realtime_quote = quotes[row[0]]
+            except Exception as e:
+                logger.warning(f"获取单只股票实时行情失败: {e}")
+            
+            if realtime_quote:
+                # 使用实时数据
+                current_price = realtime_quote['current_price']
+                change_percent = realtime_quote['change_percent'] / 100.0 # 转换为小数
+                change = realtime_quote['change']
+                open_price = realtime_quote['open_price']
+                high_price = realtime_quote['high_price']
+                low_price = realtime_quote['low_price']
+                pre_close = realtime_quote['pre_close']
+                volume = realtime_quote['volume']
+                amount = realtime_quote['amount']
+                trade_date = realtime_quote['trade_date']
+            else:
+                # 使用数据库数据
+                # 涨跌幅转换：数据库中存储的是百分比形式（如-1.6298），需要除以100转为小数形式（-0.016298）
+                change_percent = float(row[16]) / 100.0 if row[16] else 0.0
+                current_price = float(row[10]) if row[10] else 0.0
+                change = float(row[15]) if row[15] else 0.0
+                open_price = float(row[11]) if row[11] else 0.0
+                high_price = float(row[12]) if row[12] else 0.0
+                low_price = float(row[13]) if row[13] else 0.0
+                pre_close = float(row[14]) if row[14] else 0.0
+                volume = int(row[17]) if row[17] else 0
+                amount = float(row[18]) if row[18] else 0.0
+                trade_date = str(row[23]) if row[23] else None
             
             stock_info = {
                 # 基本信息
@@ -526,20 +707,20 @@ class DataService:
                 'is_hs': row[9],
                 'type': 'stock',
                 # 行情数据（如果有）
-                'current_price': float(row[10]) if row[10] else 0.0,
-                'open_price': float(row[11]) if row[11] else 0.0,
-                'high_price': float(row[12]) if row[12] else 0.0,
-                'low_price': float(row[13]) if row[13] else 0.0,
-                'pre_close': float(row[14]) if row[14] else 0.0,
-                'change': float(row[15]) if row[15] else 0.0,
+                'current_price': current_price,
+                'open_price': open_price,
+                'high_price': high_price,
+                'low_price': low_price,
+                'pre_close': pre_close,
+                'change': change,
                 'change_percent': change_percent,
-                'volume': int(row[17]) if row[17] else 0,
-                'amount': float(row[18]) if row[18] else 0.0,
+                'volume': volume,
+                'amount': amount,
                 'turnover_rate': float(row[19]) if row[19] else 0.0,
                 'pe': float(row[20]) if row[20] else 0.0,
                 'pb': float(row[21]) if row[21] else 0.0,
                 'market_cap': float(row[22]) if row[22] else 0.0,
-                'trade_date': str(row[23]) if row[23] else None
+                'trade_date': trade_date
             }
             
             logger.info(f"获取股票信息: code={code}, name={stock_info['name']}, price={stock_info['current_price']}")

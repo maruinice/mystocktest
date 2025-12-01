@@ -18,13 +18,15 @@ logger = logging.getLogger(__name__)
 class SuspendSyncService(BaseSyncService):
     """停复牌信息同步服务"""
     
-    async def sync(self, start_date: str = None, end_date: str = None, **kwargs) -> Dict[str, Any]:
+    async def sync(self, start_date: str = None, end_date: str = None, direction: str = 'forward', days: int = 30, **kwargs) -> Dict[str, Any]:
         """
-        同步停复牌信息
+        同步停复牌信息（支持增量同步和历史追溯）
         
         Args:
             start_date: 开始日期 (YYYYMMDD)
             end_date: 结束日期 (YYYYMMDD)
+            direction: 同步方向 ('forward': 向后/最新, 'backward': 向前/历史)
+            days: 同步天数（默认30天）
             
         Returns:
             同步结果
@@ -35,15 +37,44 @@ class SuspendSyncService(BaseSyncService):
             if not self.pro:
                 raise ValueError("Tushare API未初始化")
             
-            # 设置默认日期范围
-            if not end_date:
-                end_date = datetime.now().strftime('%Y%m%d')
+            # 根据 direction 确定日期范围
+            if not start_date or not end_date:
+                # 获取数据库中的日期范围
+                date_range = await self.get_sync_date_range('suspend_info', 'suspend_date')
+                min_date = date_range.get('min_date')
+                max_date = date_range.get('max_date')
+                
+                if direction == 'forward':
+                    # 向后更新：从 max_date + 1 到今天
+                    if max_date:
+                        last_dt = datetime.strptime(max_date, '%Y%m%d')
+                        start_dt = last_dt + timedelta(days=1)
+                        start_date = start_dt.strftime('%Y%m%d')
+                    else:
+                        # 如果数据库为空，默认同步最近30天
+                        start_date = (datetime.now() - timedelta(days=days)).strftime('%Y%m%d')
+                    
+                    end_date = datetime.now().strftime('%Y%m%d')
+                    
+                elif direction == 'backward':
+                    # 向前追溯：从 min_date - days 到 min_date - 1
+                    if min_date:
+                        end_dt = datetime.strptime(min_date, '%Y%m%d') - timedelta(days=1)
+                        end_date = end_dt.strftime('%Y%m%d')
+                        start_dt = end_dt - timedelta(days=days)
+                        start_date = start_dt.strftime('%Y%m%d')
+                    else:
+                        # 如果数据库为空，从指定天数前开始到今天
+                        end_date = datetime.now().strftime('%Y%m%d')
+                        start_dt = datetime.now() - timedelta(days=days)
+                        start_date = start_dt.strftime('%Y%m%d')
             
-            if not start_date:
-                # 默认同步最近30天的数据
-                start_date = (datetime.now() - timedelta(days=30)).strftime('%Y%m%d')
+            # 如果开始日期晚于结束日期，说明不需要同步
+            if start_date > end_date:
+                self.finish_sync(True, "没有需要同步的数据")
+                return {'success': True, 'message': '没有需要同步的数据'}
             
-            self.update_progress(0, 1, f"准备同步停复牌信息: {start_date} - {end_date}")
+            self.update_progress(0, 1, f"准备同步停复牌信息 ({'向后' if direction == 'forward' else '向前'}): {start_date} - {end_date}")
             
             # 调用Tushare API获取停复牌信息
             logger.info(f"从Tushare获取停复牌信息: {start_date} - {end_date}")
@@ -69,6 +100,7 @@ class SuspendSyncService(BaseSyncService):
                 'success': True,
                 'message': f'成功同步{saved_count}条停复牌信息',
                 'data': {
+                    'direction': direction,
                     'start_date': start_date,
                     'end_date': end_date,
                     'saved_count': saved_count,

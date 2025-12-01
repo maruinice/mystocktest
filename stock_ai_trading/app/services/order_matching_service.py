@@ -15,7 +15,6 @@ from sqlalchemy.orm import Session
 from ..core.database import get_db
 from ..models.trading_db import DBOrder, DBPosition, DBAccount
 from .data_service import DataService
-from .realtime_quote_service import RealtimeQuoteService
 
 logger = logging.getLogger(__name__)
 
@@ -26,7 +25,6 @@ class OrderMatchingService:
     def __init__(self):
         """初始化服务"""
         self.data_service = DataService()
-        self.realtime_quote_service = RealtimeQuoteService()  # 实时行情服务
         self.is_running = False
         self.matching_thread = None
     
@@ -96,20 +94,40 @@ class OrderMatchingService:
     
     def _match_order(self, db: Session, order: DBOrder):
         """撮合单个订单"""
-        # 使用实时行情服务获取价格
-        quote_data = self.realtime_quote_service.get_realtime_price(order.stock_code)
-        
-        if not quote_data:
-            logger.warning(f"无法获取股票 {order.stock_code} 的实时行情")
+        # 使用DataService获取实时价格
+        try:
+            # 构造完整的股票代码
+            stock_code = order.stock_code
+            # 如果代码不包含市场后缀，尝试添加
+            if '.' not in stock_code:
+                # 根据代码前缀判断市场
+                if stock_code.startswith('6'):
+                    stock_code = f"{stock_code}.SH"
+                elif stock_code.startswith(('0', '3')):
+                    stock_code = f"{stock_code}.SZ"
+                elif stock_code.startswith(('4', '8')):
+                    stock_code = f"{stock_code}.BJ"
+            
+            # 获取实时行情
+            quotes = self.data_service.fetch_realtime_quotes([stock_code])
+            
+            if not quotes or stock_code not in quotes:
+                logger.warning(f"无法获取股票 {stock_code} 的实时行情")
+                return
+            
+            quote_data = quotes[stock_code]
+            current_price = quote_data.get('current_price', 0)
+            
+            if current_price <= 0:
+                logger.warning(f"股票 {stock_code} 价格无效: {current_price}")
+                return
+            
+            logger.info(f"股票 {stock_code} ({quote_data.get('name', '')}) 当前价: ¥{current_price:.2f}, "
+                       f"涨跌: {quote_data.get('change_percent', 0):.2f}%")
+            
+        except Exception as e:
+            logger.error(f"获取股票 {order.stock_code} 实时行情失败: {e}")
             return
-        
-        current_price = quote_data.get('current', 0)
-        if current_price <= 0:
-            logger.warning(f"股票 {order.stock_code} 价格无效: {current_price}")
-            return
-        
-        logger.info(f"股票 {order.stock_code} ({quote_data.get('name', '')}) 当前价: ¥{current_price:.2f}, "
-                   f"涨跌: {quote_data.get('change_pct', 0):.2f}%")
         
         # 判断是否可以成交
         can_fill = False
@@ -125,12 +143,12 @@ class OrderMatchingService:
                 # 买入：限价 >= 当前价
                 if order.price >= current_price:
                     can_fill = True
-                    fill_price = min(order.price, current_price)
+                    fill_price = min(float(order.price), current_price)
             else:  # sell
                 # 卖出：限价 <= 当前价
                 if order.price <= current_price:
                     can_fill = True
-                    fill_price = max(order.price, current_price)
+                    fill_price = max(float(order.price), current_price)
         
         if not can_fill:
             return
@@ -147,8 +165,21 @@ class OrderMatchingService:
             # 计算交易金额
             trade_amount = fill_price * order.quantity
             
-            # 计算手续费（万分之三）
-            commission = trade_amount * Decimal('0.0003')
+            # 计算手续费
+            # 1. 佣金：万分之三，最低5元
+            commission_rate = Decimal('0.0003')
+            commission = max(trade_amount * commission_rate, Decimal('5.00'))
+            
+            # 2. 印花税：卖出时收取千分之一
+            stamp_duty = Decimal('0')
+            if order.side == 'sell':
+                stamp_duty = trade_amount * Decimal('0.001')
+            
+            # 3. 过户费：成交金额的万分之0.2（双向收取）
+            transfer_fee = trade_amount * Decimal('0.00002')
+            
+            # 总手续费
+            total_commission = commission + stamp_duty + transfer_fee
             
             # 获取账户
             account = db.query(DBAccount).filter(
@@ -163,7 +194,8 @@ class OrderMatchingService:
             order.status = 'filled'
             order.filled_quantity = order.quantity
             order.avg_price = fill_price
-            order.commission = commission
+            order.commission = total_commission
+            order.filled_at = datetime.now()
             order.updated_at = datetime.now()
             
             # 更新持仓
@@ -176,14 +208,26 @@ class OrderMatchingService:
             
             if order.side == 'buy':
                 # 买入
-                # 扣除资金
-                total_cost = trade_amount + commission
-                if account.available_cash < total_cost:
-                    logger.error(f"账户资金不足: 需要 {total_cost}, 可用 {account.available_cash}")
-                    order.status = 'rejected'
-                    return
+                # 扣除冻结资金
+                frozen_amount = Decimal(str(order.quantity)) * Decimal(str(order.price))
+                account.frozen_cash -= frozen_amount
                 
-                account.available_cash -= total_cost
+                # 实际成交金额（含手续费）
+                total_cost = trade_amount + total_commission
+                actual_cash_needed = total_cost - frozen_amount
+                
+                # 如果实际需要的资金大于冻结资金，从可用资金中扣除差额
+                if actual_cash_needed > 0:
+                    if account.available_cash < actual_cash_needed:
+                        logger.error(f"账户资金不足: 需要额外 {actual_cash_needed}, 可用 {account.available_cash}")
+                        order.status = 'rejected'
+                        # 恢复冻结资金
+                        account.frozen_cash += frozen_amount
+                        return
+                    account.available_cash -= actual_cash_needed
+                else:
+                    # 如果冻结资金有剩余，返还到可用资金
+                    account.available_cash += abs(actual_cash_needed)
                 
                 # 更新持仓
                 if position:
@@ -193,6 +237,9 @@ class OrderMatchingService:
                                       fill_price * order.quantity)
                     position.avg_cost = total_cost_value / total_quantity
                     position.quantity = total_quantity
+                    # 买入的股票T+1才能卖出，所以不增加available_quantity
+                    # position.available_quantity 保持不变
+                    position.frozen_quantity += order.quantity  # 标记为冻结（T+1解冻）
                     position.updated_at = datetime.now()
                 else:
                     # 新建持仓
@@ -201,8 +248,10 @@ class OrderMatchingService:
                         stock_code=order.stock_code,
                         stock_name=order.stock_name,
                         quantity=order.quantity,
-                        available_quantity=order.quantity,  # 设置可用数量
+                        available_quantity=0,  # T+1，今天买入的不可用
+                        frozen_quantity=order.quantity,  # 标记为冻结
                         avg_cost=fill_price,
+                        last_price=fill_price,
                         created_at=datetime.now(),
                         updated_at=datetime.now()
                     )
@@ -210,13 +259,20 @@ class OrderMatchingService:
             
             else:  # sell
                 # 卖出
-                if not position or position.quantity < order.quantity:
-                    logger.error(f"持仓不足: 需要 {order.quantity}, 持有 {position.quantity if position else 0}")
+                if not position or position.available_quantity < order.quantity:
+                    logger.error(f"可用持仓不足: 需要 {order.quantity}, 可用 {position.available_quantity if position else 0}")
                     order.status = 'rejected'
+                    # 恢复冻结持仓
+                    if position:
+                        position.available_quantity += order.quantity
+                        position.frozen_quantity -= order.quantity
                     return
                 
-                # 增加资金
-                total_income = trade_amount - commission
+                # 解冻持仓
+                position.frozen_quantity -= order.quantity
+                
+                # 增加资金（扣除手续费）
+                total_income = trade_amount - total_commission
                 account.available_cash += total_income
                 
                 # 更新持仓
@@ -231,7 +287,8 @@ class OrderMatchingService:
             account.updated_at = datetime.now()
             
             logger.info(f"订单 {order.order_id} 成交: {order.stock_code} {order.side} "
-                       f"{order.quantity}股 @ ¥{fill_price:.2f}, 手续费 ¥{commission:.2f}")
+                       f"{order.quantity}股 @ ¥{fill_price:.2f}, "
+                       f"手续费 ¥{total_commission:.2f} (佣金:{commission:.2f} 印花税:{stamp_duty:.2f} 过户费:{transfer_fee:.2f})")
             
         except Exception as e:
             logger.error(f"执行订单成交失败: {e}", exc_info=True)

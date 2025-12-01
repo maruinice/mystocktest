@@ -41,6 +41,7 @@ from app.api.data_management_api import data_mgmt_bp
 from app.api.screening_api import screening_bp
 from app.api.data_sync_api import data_sync_bp  # 数据同步API
 from app.api.quote_api import quote_bp  # 实时行情API
+from app.api.market_hotspot_api import market_hotspot_bp  # 市场热点API
 # 尝试加载模型管理相关蓝图，失败时回退到占位接口以保证核心服务可启动
 try:
     from app.api.model_management_flask import model_mgmt_bp
@@ -135,6 +136,38 @@ def create_app(config_name='development'):
         app.logger.info("持仓价格更新服务已启动")
     except Exception as e:
         app.logger.warning(f"持仓价格更新服务启动失败: {e}")
+    
+    # 启动T+1解冻服务（每日开盘前执行）
+    try:
+        from app.services.t1_unfreeze_service import t1_unfreeze_service
+        import threading
+        import time
+        
+        def daily_unfreeze_task():
+            """每日T+1解冻任务"""
+            while True:
+                try:
+                    # 每天早上9:00执行解冻
+                    from datetime import datetime
+                    now = datetime.now()
+                    # 如果当前时间是9:00-9:05之间，执行解冻
+                    if now.hour == 9 and now.minute < 5:
+                        app.logger.info("开始执行T+1持仓解冻...")
+                        t1_unfreeze_service.unfreeze_positions()
+                        # 解冻后等待到第二天
+                        time.sleep(86400)  # 24小时
+                    else:
+                        # 否则等待1分钟再检查
+                        time.sleep(60)
+                except Exception as e:
+                    app.logger.error(f"T+1解冻任务执行失败: {e}")
+                    time.sleep(60)
+        
+        unfreeze_thread = threading.Thread(target=daily_unfreeze_task, daemon=True)
+        unfreeze_thread.start()
+        app.logger.info("T+1解冻服务已启动")
+    except Exception as e:
+        app.logger.warning(f"T+1解冻服务启动失败: {e}")
     
     return app
 
@@ -278,6 +311,7 @@ def register_blueprints(app):
     app.register_blueprint(ai_decision_bp, url_prefix=f'{api_prefix}/ai-decision')
     app.register_blueprint(portfolio_bp)
     app.register_blueprint(quote_bp, url_prefix=f'{api_prefix}/quote')  # 实时行情API
+    app.register_blueprint(market_hotspot_bp)  # 市场热点API，已有自己的url_prefix='/api/market'
     # 数据管理相关API
     app.register_blueprint(data_mgmt_bp)  # data_mgmt_bp已经有自己的url_prefix='/api/data-management'
     app.register_blueprint(screening_bp, url_prefix=f'{api_prefix}/screening')  # 选股API

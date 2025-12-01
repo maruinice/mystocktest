@@ -45,6 +45,8 @@ class DBAccount(Base):
             'market_value': float(self.market_value),
             'profit_loss': float(self.profit_loss),
             'profit_loss_pct': float(self.profit_loss_pct),
+            'total_pnl': float(self.profit_loss),
+            'total_pnl_ratio': float(self.profit_loss_pct),
             'buying_power': float(self.buying_power),
             'margin_used': float(self.margin_used),
             'margin_available': float(self.margin_available),

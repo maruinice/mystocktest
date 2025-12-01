@@ -88,6 +88,32 @@
         </h3>
         <div class="header-actions">
           <el-select 
+            v-model="hotspotSource" 
+            size="small" 
+            style="width: 120px; margin-right: 8px"
+            @change="fetchMarketHotStocks"
+          >
+            <el-option label="涨幅榜" value="gainers" />
+            <el-option label="跌幅榜" value="losers" />
+            <el-option label="成交量榜" value="volume" />
+            <el-option label="换手率榜" value="turnover" />
+          </el-select>
+          <el-select 
+            v-model="hotspotLimit" 
+            size="small" 
+            style="width: 100px; margin-right: 8px"
+            @change="fetchMarketHotStocks"
+            allow-create
+            filterable
+            default-first-option
+          >
+            <el-option label="4条" :value="4" />
+            <el-option label="8条" :value="8" />
+            <el-option label="12条" :value="12" />
+            <el-option label="16条" :value="16" />
+            <el-option label="20条" :value="20" />
+          </el-select>
+          <el-select 
             v-model="marketRefreshInterval" 
             size="small" 
             style="width: 120px; margin-right: 8px"
@@ -116,9 +142,12 @@
             </div>
             <div class="stock-name">{{ stock.name }}</div>
             <div class="stock-price" :class="stock.change_pct >= 0 ? 'price-up' : 'price-down'">
-              ¥{{ stock.current.toFixed(2) }}
+              ¥{{ stock.price.toFixed(2) }}
             </div>
-            <div class="stock-volume">成交量: {{ formatVolume(stock.volume) }}</div>
+            <div class="stock-info">
+              <span v-if="stock.turnover_rate">换手率: {{ stock.turnover_rate.toFixed(2) }}%</span>
+              <span v-if="stock.volume">成交量: {{ formatVolume(stock.volume) }}</span>
+            </div>
           </div>
         </el-col>
       </el-row>
@@ -293,6 +322,8 @@ const chartPeriod = ref('1D')
 const marketLoading = ref(false)
 const marketHotStocks = ref<any[]>([])
 const marketRefreshInterval = ref(30) // 默认30秒
+const hotspotSource = ref('gainers') // 默认涨幅榜
+const hotspotLimit = ref(8) // 默认8条
 let refreshTimer: number | null = null
 
 // 计算属性
@@ -322,13 +353,16 @@ const positionsAll = computed(() => {
 const fetchMarketHotStocks = async () => {
   marketLoading.value = true
   try {
-    const hotStockCodes = ['000001', '600519', '600036', '000858']
-    const response = await axios.post('/api/quote/realtime/batch', {
-      codes: hotStockCodes
+    const response = await axios.get('/api/market/hotspots', {
+      params: {
+        source: hotspotSource.value,
+        limit: hotspotLimit.value
+        // 不传 trade_date，让后端自动使用最新交易日
+      }
     })
     
     if (response.data.success) {
-      marketHotStocks.value = Object.values(response.data.data)
+      marketHotStocks.value = response.data.data.hotspots || []
     }
   } catch (error) {
     console.error('获取市场热点失败:', error)
@@ -650,6 +684,14 @@ onUnmounted(() => {
   .stock-volume {
     font-size: 12px;
     color: var(--el-text-color-secondary);
+  }
+  
+  .stock-info {
+    font-size: 12px;
+    color: var(--el-text-color-secondary);
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
   }
 }
 

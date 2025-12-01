@@ -17,13 +17,15 @@ logger = logging.getLogger(__name__)
 class TradeCalSyncService(BaseSyncService):
     """交易日历同步服务"""
     
-    async def sync(self, start_date: str = None, end_date: str = None, **kwargs) -> Dict[str, Any]:
+    async def sync(self, start_date: str = None, end_date: str = None, direction: str = 'forward', days: int = 365, **kwargs) -> Dict[str, Any]:
         """
-        同步交易日历（增量同步）
+        同步交易日历（支持增量同步和历史追溯）
         
         Args:
-            start_date: 开始日期 (YYYYMMDD)，默认为数据库最新日期
-            end_date: 结束日期 (YYYYMMDD)，默认为今天
+            start_date: 开始日期 (YYYYMMDD)
+            end_date: 结束日期 (YYYYMMDD)
+            direction: 同步方向 ('forward': 向后/最新, 'backward': 向前/历史)
+            days: 向前同步时的天数
             
         Returns:
             同步结果
@@ -34,24 +36,45 @@ class TradeCalSyncService(BaseSyncService):
             if not self.pro:
                 raise ValueError("Tushare API未初始化")
             
-            # 如果没有指定开始日期，从数据库最新日期开始
-            if not start_date:
-                last_date = await self.get_last_sync_date('trade_cal', 'cal_date')
-                if last_date:
-                    # 从最新日期的下一天开始
-                    last_dt = datetime.strptime(last_date, '%Y%m%d')
-                    start_dt = last_dt + timedelta(days=1)
-                    start_date = start_dt.strftime('%Y%m%d')
-                else:
-                    # 如果数据库为空，从3年前开始
-                    start_dt = datetime.now() - timedelta(days=365*3)
-                    start_date = start_dt.strftime('%Y%m%d')
+            # 根据 direction 确定日期范围
+            if not start_date or not end_date:
+                # 获取数据库中的日期范围
+                date_range = await self.get_sync_date_range('trade_cal', 'cal_date')
+                min_date = date_range.get('min_date')
+                max_date = date_range.get('max_date')
+                
+                if direction == 'forward':
+                    # 向后更新：从 max_date + 1 到今天
+                    if max_date:
+                        last_dt = datetime.strptime(max_date, '%Y%m%d')
+                        start_dt = last_dt + timedelta(days=1)
+                        start_date = start_dt.strftime('%Y%m%d')
+                    else:
+                        # 如果数据库为空，从3年前开始
+                        start_dt = datetime.now() - timedelta(days=365*3)
+                        start_date = start_dt.strftime('%Y%m%d')
+                    
+                    end_date = datetime.now().strftime('%Y%m%d')
+                    
+                elif direction == 'backward':
+                    # 向前追溯：从 min_date - days 到 min_date - 1
+                    if min_date:
+                        end_dt = datetime.strptime(min_date, '%Y%m%d') - timedelta(days=1)
+                        end_date = end_dt.strftime('%Y%m%d')
+                        start_dt = end_dt - timedelta(days=days)
+                        start_date = start_dt.strftime('%Y%m%d')
+                    else:
+                        # 如果数据库为空，从指定天数前开始到今天
+                        end_date = datetime.now().strftime('%Y%m%d')
+                        start_dt = datetime.now() - timedelta(days=days)
+                        start_date = start_dt.strftime('%Y%m%d')
             
-            # 如果没有指定结束日期，使用今天
-            if not end_date:
-                end_date = datetime.now().strftime('%Y%m%d')
+            # 如果开始日期晚于结束日期，说明不需要同步
+            if start_date > end_date:
+                self.finish_sync(True)
+                return {'success': True, 'message': '没有新数据需要同步'}
             
-            self.update_progress(0, 2, f"同步交易日历: {start_date} - {end_date}")
+            self.update_progress(0, 2, f"同步交易日历 ({'向后' if direction == 'forward' else '向前'}): {start_date} - {end_date}")
             
             # 获取上交所和深交所的交易日历
             logger.info(f"获取交易日历: {start_date} - {end_date}")
@@ -106,6 +129,7 @@ class TradeCalSyncService(BaseSyncService):
                 'success': True,
                 'message': f'成功同步{saved_count}条交易日历',
                 'data': {
+                    'direction': direction,
                     'start_date': start_date,
                     'end_date': end_date,
                     'total': total,

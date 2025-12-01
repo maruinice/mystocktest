@@ -15,6 +15,7 @@ from sqlalchemy import and_, or_, desc
 from ..core.database import get_db
 from ..models.trading_db import DBAccount, DBPosition, DBOrder
 from ..models.stock_models import StockBasic
+from ..services.data_service import DataService
 
 logger = logging.getLogger(__name__)
 
@@ -24,7 +25,59 @@ class DatabaseTradeService:
     
     def __init__(self):
         """初始化服务"""
-        pass
+        self.data_service = DataService()
+
+    def _update_positions_market_value(self, db: Session, user_id: int) -> List[DBPosition]:
+        """更新持仓市值（获取实时行情）"""
+        positions = db.query(DBPosition).filter(
+            DBPosition.user_id == user_id,
+            DBPosition.quantity > 0
+        ).all()
+        
+        if not positions:
+            return []
+            
+        # 获取所有持仓股票代码
+        codes = [pos.stock_code for pos in positions]
+        
+        # 获取实时行情
+        try:
+            quotes = self.data_service.fetch_realtime_quotes(codes)
+        except Exception as e:
+            logger.error(f"更新持仓市值时获取行情失败: {e}")
+            quotes = {}
+            
+        # 更新持仓信息
+        for pos in positions:
+            # 如果获取到了实时行情，使用实时价格
+            # 否则保持原有价格（或者使用昨收价？）
+            current_price = pos.last_price
+            
+            if pos.stock_code in quotes:
+                quote = quotes[pos.stock_code]
+                current_price = Decimal(str(quote['current_price']))
+                pos.last_price = current_price
+            
+            # 更新市值和盈亏
+            # 市值 = 数量 * 当前价
+            pos.market_value = Decimal(str(pos.quantity)) * current_price
+            
+            # 成本 = 数量 * 平均成本
+            pos.cost_basis = Decimal(str(pos.quantity)) * pos.avg_cost
+            
+            # 盈亏 = 市值 - 成本
+            pos.profit_loss = pos.market_value - pos.cost_basis
+            
+            # 盈亏比例
+            if pos.cost_basis > 0:
+                pos.profit_loss_pct = Decimal(str(float(pos.profit_loss) / float(pos.cost_basis) * 100))
+            else:
+                pos.profit_loss_pct = Decimal('0')
+                
+            pos.updated_at = datetime.now()
+            
+        db.commit()
+        return positions
     
     def _get_or_create_account(self, db: Session, user_id: str) -> DBAccount:
         """获取或创建账户"""
@@ -53,10 +106,7 @@ class DatabaseTradeService:
             account = self._get_or_create_account(db, user_id)
             
             # 更新持仓市值和盈亏
-            positions = db.query(DBPosition).filter(
-                DBPosition.user_id == int(user_id),
-                DBPosition.quantity > 0
-            ).all()
+            positions = self._update_positions_market_value(db, int(user_id))
             
             total_market_value = sum(float(pos.market_value) for pos in positions)
             total_profit_loss = sum(float(pos.profit_loss) for pos in positions)
@@ -94,23 +144,22 @@ class DatabaseTradeService:
             # 只返回有持仓的
             positions = query.filter(DBPosition.quantity > 0).all()
             
-            # 更新实时价格（这里简化处理，实际应该从行情服务获取）
-            positions_data = []
-            for position in positions:
-                # TODO: 从行情服务获取实时价格
-                position.market_value = Decimal(str(position.quantity)) * position.last_price
-                position.cost_basis = Decimal(str(position.quantity)) * position.avg_cost
-                position.profit_loss = position.market_value - position.cost_basis
-                
-                if position.cost_basis > 0:
-                    position.profit_loss_pct = Decimal(str(float(position.profit_loss) / float(position.cost_basis) * 100))
-                else:
-                    position.profit_loss_pct = Decimal('0')
-                
-                # 在Session关闭前转换为字典
-                positions_data.append(position.to_dict())
+            # 更新实时价格
+            # 如果指定了code，只更新该code的持仓，但为了准确性，最好还是批量更新
+            # 这里简单起见，如果指定了code，也调用_update_positions_market_value更新所有持仓
+            # 然后再过滤
             
-            db.commit()
+            self._update_positions_market_value(db, int(user_id))
+            
+            # 重新查询（因为_update_positions_market_value已经commit了）
+            query = db.query(DBPosition).filter(DBPosition.user_id == int(user_id))
+            if code:
+                query = query.filter(DBPosition.stock_code == code)
+            
+            positions = query.filter(DBPosition.quantity > 0).all()
+            
+            positions_data = [pos.to_dict() for pos in positions]
+            
             return positions_data
             
         except Exception as e:

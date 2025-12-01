@@ -149,7 +149,7 @@
                 {{ (row.profit_loss || 0) >= 0 ? '+' : '' }}¥{{ formatNumber(row.profit_loss || 0) }}
               </div>
               <div class="pnl-ratio" :class="(row.profit_loss_pct || 0) >= 0 ? 'stock-up' : 'stock-down'">
-                {{ (row.profit_loss_pct || 0) >= 0 ? '+' : '' }}{{ ((row.profit_loss_pct || 0) * 100).toFixed(2) }}%
+                {{ (row.profit_loss_pct || 0) >= 0 ? '+' : '' }}{{ (row.profit_loss_pct || 0).toFixed(2) }}%
               </div>
             </div>
           </template>
@@ -225,6 +225,12 @@
         </el-table-column>
       </el-table>
     </div>
+    
+    <!-- 股票详情对话框 -->
+    <StockDetailDialog 
+      v-model="showDetailDialog" 
+      :symbol="selectedSymbol"
+    />
   </div>
 </template>
 
@@ -244,6 +250,7 @@ import VChart from 'vue-echarts'
 import { useTradingStore } from '@/stores/trading'
 import { formatNumber, formatDateTime } from '@/utils/format'
 import { dataApi } from '@/api/data'
+import StockDetailDialog from '@/components/StockDetailDialog.vue'
 
 use([
   CanvasRenderer,
@@ -256,6 +263,10 @@ use([
 const router = useRouter()
 const tradingStore = useTradingStore()
 const loading = ref(false)
+
+// 股票详情对话框
+const showDetailDialog = ref(false)
+const selectedSymbol = ref('')
 
 // 计算属性
 const positions = computed(() => {
@@ -337,9 +348,7 @@ const industryDistributionOption = computed(() => ({
 
 // 方法
 const priceMap = ref<Record<string, number>>({})
-const getCurrentPrice = (symbol: string): number => {
-  return priceMap.value[symbol] || 0
-}
+
 const loadPrices = async () => {
   const symbols = positions.value.map(p => p.symbol)
   for (const s of symbols) {
@@ -393,7 +402,7 @@ const handleAction = (command: { action: string; symbol: string }) => {
     case 'buy':
     case 'sell':
       router.push({
-        path: '/trading',
+        path: '/admin/trading',
         query: { symbol, action }
       })
       break
@@ -404,12 +413,13 @@ const handleAction = (command: { action: string; symbol: string }) => {
 }
 
 const viewStockDetail = (row: { symbol: string }) => {
-  // 查看股票详情
-  ElMessage.info(`查看 ${row.symbol} 详情`)
+  // 打开股票详情对话框
+  selectedSymbol.value = row.symbol
+  showDetailDialog.value = true
 }
 
 const viewAllTrades = () => {
-  router.push('/trading?tab=trades')
+  router.push('/admin/trading?tab=trades')
 }
 
 onMounted(async () => {

@@ -1,5 +1,6 @@
 export interface StockInfo {
   symbol: string
+  code?: string
   name: string
   market: string
   industry?: string
@@ -9,10 +10,16 @@ export interface StockInfo {
   pb_ratio?: number
   dividend_yield?: number
   current_price?: number
+  open_price?: number
+  high_price?: number
+  low_price?: number
+  pre_close?: number
   change?: number
   change_percent?: number
   volume?: number
   turnover?: number
+  list_date?: string
+  exchange?: string
   updated_at: string
 }
 

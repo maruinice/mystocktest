@@ -12,11 +12,71 @@
           <div class="card-header">
             <h3>股票搜索</h3>
           </div>
+          
+          <!-- 热点股票 -->
+          <div class="hot-stocks-section">
+            <div class="section-title">
+              <span>热点股票</span>
+              <div class="section-actions">
+                <el-select 
+                  v-model="hotStockSource" 
+                  size="small" 
+                  style="width: 100px; margin-right: 8px"
+                  @change="loadHotStocks"
+                >
+                  <el-option label="涨幅榜" value="gainers" />
+                  <el-option label="跌幅榜" value="losers" />
+                  <el-option label="成交量" value="volume" />
+                  <el-option label="换手率" value="turnover" />
+                </el-select>
+                <el-select 
+                  v-model="hotStockLimit" 
+                  size="small" 
+                  style="width: 90px; margin-right: 8px"
+                  @change="loadHotStocks"
+                  allow-create
+                  filterable
+                  default-first-option
+                >
+                  <el-option label="4条" :value="4" />
+                  <el-option label="8条" :value="8" />
+                  <el-option label="12条" :value="12" />
+                  <el-option label="16条" :value="16" />
+                </el-select>
+                <el-button size="small" @click="loadHotStocks" :loading="hotStocksLoading">
+                  <el-icon><Refresh /></el-icon>
+                </el-button>
+              </div>
+            </div>
+            <el-row :gutter="12" v-loading="hotStocksLoading">
+              <el-col :xs="24" :sm="12" :md="8" :lg="6" v-for="stock in hotStocks" :key="stock.code">
+                <div class="hot-stock-card" @click="selectHotStock(stock)">
+                  <div class="stock-header">
+                    <span class="stock-code">{{ stock.code }}</span>
+                    <el-tag :type="stock.change_pct >= 0 ? 'danger' : 'success'" size="small">
+                      {{ stock.change_pct >= 0 ? '+' : '' }}{{ stock.change_pct.toFixed(2) }}%
+                    </el-tag>
+                  </div>
+                  <div class="stock-name">{{ stock.name }}</div>
+                  <div class="stock-price" :class="stock.change_pct >= 0 ? 'price-up' : 'price-down'">
+                    ¥{{ stock.price.toFixed(2) }}
+                  </div>
+                  <div class="stock-info">
+                    <span v-if="stock.turnover_rate">换手率: {{ stock.turnover_rate.toFixed(2) }}%</span>
+                    <span v-if="stock.volume">成交量: {{ formatVolume(stock.volume) }}</span>
+                  </div>
+                </div>
+              </el-col>
+            </el-row>
+            <el-empty v-if="hotStocks.length === 0 && !hotStocksLoading" description="暂无数据" :image-size="80" />
+          </div>
+          
           <el-input
             v-model="searchKeyword"
             placeholder="输入股票代码或名称"
             @input="handleSearch"
             clearable
+            class="mt-3"
           >
             <template #prefix>
               <el-icon><Search /></el-icon>
@@ -267,6 +327,7 @@
 
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus'
 import { useTradingStore } from '@/stores/trading'
 import { dataApi } from '@/api/data'
@@ -285,6 +346,7 @@ import {
   LegendComponent
 } from 'echarts/components'
 import VChart from 'vue-echarts'
+import axios from 'axios'
 
 // 注册ECharts组件
 use([
@@ -299,6 +361,7 @@ use([
 ])
 
 const tradingStore = useTradingStore()
+const route = useRoute()
 const realtimeQuoteRef = ref<InstanceType<typeof RealtimeQuote> | null>(null)
 
 // 响应式数据
@@ -310,6 +373,12 @@ const ordersLoading = ref(false)
 const klineLoading = ref(false)
 const orderFormRef = ref<FormInstance>()
 const klineData = ref<any[]>([])
+
+// 热点股票相关
+const hotStocks = ref<any[]>([])
+const hotStockSource = ref('gainers')
+const hotStockLimit = ref(8) // 默认8条
+const hotStocksLoading = ref(false)
 
 // 订单表单
 const orderForm = reactive<PlaceOrderRequest>({
@@ -471,6 +540,55 @@ const klineChartOption = computed(() => {
 })
 
 // 方法
+// 加载热点股票
+const loadHotStocks = async () => {
+  hotStocksLoading.value = true
+  try {
+    const response = await axios.get('/api/market/hotspots', {
+      params: {
+        source: hotStockSource.value,
+        limit: hotStockLimit.value
+        // 不传 trade_date，让后端自动使用最新交易日
+      }
+    })
+    
+    if (response.data.success) {
+      hotStocks.value = response.data.data.hotspots || []
+    }
+  } catch (error) {
+    console.error('加载热点股票失败:', error)
+    hotStocks.value = []
+  } finally {
+    hotStocksLoading.value = false
+  }
+}
+
+// 选择热点股票
+const selectHotStock = async (stock: any) => {
+  try {
+    // 构造股票代码（添加市场后缀）
+    const symbol = stock.code
+    const response = await dataApi.getStockInfo(symbol)
+    selectedStock.value = response.data
+    orderForm.symbol = symbol
+    
+    if (orderForm.order_type === 'limit' && selectedStock.value.current_price) {
+      orderForm.price = selectedStock.value.current_price
+    }
+    
+    // 加载K线数据
+    await loadKlineData(symbol)
+    
+    // 清空搜索
+    searchKeyword.value = ''
+    searchResults.value = []
+    
+    ElMessage.success(`已选择 ${stock.name}`)
+  } catch (error) {
+    ElMessage.error('获取股票信息失败')
+  }
+}
+
 const handleSearch = async () => {
   if (!searchKeyword.value.trim()) {
     searchResults.value = []
@@ -625,6 +743,16 @@ const getOrderStatusText = (status: string) => {
   return statusMap[status] || status
 }
 
+// 格式化成交量
+const formatVolume = (volume: number) => {
+  if (volume >= 100000000) {
+    return (volume / 100000000).toFixed(2) + '亿'
+  } else if (volume >= 10000) {
+    return (volume / 10000).toFixed(2) + '万'
+  }
+  return volume.toString()
+}
+
 // 监听订单类型变化
 watch(() => orderForm.order_type, (newType) => {
   if (newType === 'market') {
@@ -635,14 +763,111 @@ watch(() => orderForm.order_type, (newType) => {
 })
 
 // 组件挂载
-onMounted(() => {
+onMounted(async () => {
   tradingStore.initialize()
+  loadHotStocks()
+  
+  // 处理路由参数
+  const { symbol, action } = route.query
+  if (symbol) {
+    try {
+      const response = await dataApi.getStockInfo(symbol as string)
+      selectedStock.value = response.data
+      orderForm.symbol = symbol as string
+      
+      if (orderForm.order_type === 'limit' && selectedStock.value.current_price) {
+        orderForm.price = selectedStock.value.current_price
+      }
+      
+      // 加载K线数据
+      await loadKlineData(symbol as string)
+    } catch (error) {
+      console.error('Failed to load stock info from query:', error)
+    }
+  }
+  
+  if (action && (action === 'buy' || action === 'sell')) {
+    orderForm.side = action as 'buy' | 'sell'
+  }
 })
 </script>
 
 <style lang="scss" scoped>
 .trading-container {
   padding: 24px;
+}
+
+.hot-stocks-section {
+  margin-bottom: 16px;
+  
+  .section-title {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--el-text-color-regular);
+    
+    .section-actions {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+  }
+  
+  .hot-stock-card {
+    background: var(--el-fill-color-light);
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 12px;
+    transition: all 0.3s;
+    cursor: pointer;
+    
+    &:hover {
+      background: var(--el-fill-color);
+      transform: translateY(-2px);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+    
+    .stock-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+    
+    .stock-code {
+      font-weight: 600;
+      font-size: 16px;
+    }
+    
+    .stock-name {
+      font-size: 13px;
+      color: var(--el-text-color-secondary);
+      margin-bottom: 8px;
+    }
+    
+    .stock-price {
+      font-size: 22px;
+      font-weight: 600;
+      font-family: 'Courier New', monospace;
+      margin-bottom: 4px;
+    }
+    
+    .stock-info {
+      font-size: 12px;
+      color: var(--el-text-color-secondary);
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+  }
+}
+
+
+.mt-3 {
+  margin-top: 12px;
 }
 
 .search-results {
