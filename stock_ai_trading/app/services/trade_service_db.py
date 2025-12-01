@@ -70,7 +70,7 @@ class DatabaseTradeService:
             
             # 盈亏比例
             if pos.cost_basis > 0:
-                pos.profit_loss_pct = Decimal(str(float(pos.profit_loss) / float(pos.cost_basis) * 100))
+                pos.profit_loss_pct = Decimal(str(float(pos.profit_loss) / float(pos.cost_basis)))
             else:
                 pos.profit_loss_pct = Decimal('0')
                 
@@ -117,7 +117,7 @@ class DatabaseTradeService:
             account.total_assets = account.available_cash + account.frozen_cash + account.market_value
             
             if total_market_value - total_profit_loss > 0:
-                account.profit_loss_pct = Decimal(str(total_profit_loss / (total_market_value - total_profit_loss) * 100))
+                account.profit_loss_pct = Decimal(str(total_profit_loss / (total_market_value - total_profit_loss)))
             else:
                 account.profit_loss_pct = Decimal('0')
             

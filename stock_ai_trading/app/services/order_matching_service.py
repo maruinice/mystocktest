@@ -209,7 +209,14 @@ class OrderMatchingService:
             if order.side == 'buy':
                 # 买入
                 # 扣除冻结资金
-                frozen_amount = Decimal(str(order.quantity)) * Decimal(str(order.price))
+                # 注意：需要与下单时的冻结逻辑保持一致
+                if order.order_type == 'market':
+                    # 市价单下单时按 10.0 估算冻结
+                    frozen_price = Decimal('10.0')
+                else:
+                    frozen_price = Decimal(str(order.price))
+                
+                frozen_amount = Decimal(str(order.quantity)) * frozen_price
                 account.frozen_cash -= frozen_amount
                 
                 # 实际成交金额（含手续费）
